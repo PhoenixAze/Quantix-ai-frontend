@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Qwen Chat — Prototip</title>
+
+<!-- PWA: telefonda "Ana ekrana əlavə et" üçün lazımdır -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#12141C" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<!-- Firebase SDK (compat versiya — sadə <script> teqləri ilə işləyir, build alətinə ehtiyac yoxdur) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  :root {
+    --bg: #12141c;
+    --surface: #1b1e29;
+    --surface-2: #232838;
+    --border: #2a2f40;
+    --text: #ededf0;
+    --text-muted: #8a8d9a;
+    --accent: #e8a33d;
+    --accent-ink: #241a06;
+    --online: #4fd1c5;
+    --danger: #e5484d;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ================= YÜKLƏNMƏ EKRANI ================= */
+  /* Firebase "bu istifadəçi əvvəldən giriş edib mi?" sualına cavab verənə
+     qədər göstərilir ki, ekran "yanıb-sönməsin" (əvvəl auth ekranı,
+     sonra dərhal çat ekranı kimi) */
+  #loading-screen {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ================= GİRİŞ / QEYDİYYAT EKRANI ================= */
+  #auth-screen {
+    display: none; /* JS ilə açılır */
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  #auth-screen.visible { display: flex; }
+
+  .auth-card {
+    width: 100%;
+    max-width: 340px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+  }
+
+  .auth-card .glyph {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .auth-card h1 { margin: 0 0 18px; font-size: 18px; }
+
+  .auth-tabs {
+    display: flex;
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 16px;
+  }
+  .auth-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .auth-tab.active { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+  .auth-card .field { margin-bottom: 12px; }
+  .auth-card .field label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+  }
+  .auth-card .field input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .auth-card .field input:focus { outline: none; border-color: var(--accent); }
+
+  #auth-error {
+    display: none;
+    background: rgba(229,72,77,0.08);
+    border: 1px solid rgba(229,72,77,0.4);
+    color: #ffb3b5;
+    font-size: 12.5px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  #auth-submit {
+    width: 100%;
+    padding: 11px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 14.5px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  #auth-submit:disabled { opacity: 0.5; }
+
+  /* ================= ÇAT EKRANI ================= */
+  #chat-screen {
+    display: none;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  #chat-screen.visible { display: flex; }
+
+  header {
+    flex: 0 0 auto;
+    padding: 14px 16px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .header-titles { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  /* Koin sayını göstərən kiçik yazı, başlığın altında */
+  .coin-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  #auth-screen h1, .auth-card h1 { font-size: 18px; }
+
+  .status-pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex: 0 0 auto; }
+  .status-dot.online { background: var(--online); animation: pulse 2s infinite; }
+  .status-dot.offline { background: var(--danger); }
+  .status-dot.checking { background: var(--accent); }
+
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(79,209,197,0.45); }
+    70%  { box-shadow: 0 0 0 6px rgba(79,209,197,0); }
+    100% { box-shadow: 0 0 0 0 rgba(79,209,197,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .status-dot.online { animation: none; } }
+
+  .icon-btn {
+    background: none; border: none; color: var(--text-muted);
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex: 0 0 auto;
+  }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .icon-btn svg { width: 19px; height: 19px; }
+
+  #chat-messages {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px 14px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .empty-state { margin: auto 0; text-align: center; color: var(--text-muted); padding: 0 20px; }
+  .empty-state .glyph { font-family: var(--font-mono); font-size: 28px; color: var(--accent); margin-bottom: 10px; }
+  .empty-state p { margin: 4px 0 16px; font-size: 14px; line-height: 1.5; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip {
+    font-family: var(--font-mono); font-size: 12px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); }
+
+  .row { display: flex; }
+  .row.user { justify-content: flex-end; }
+  .row.assistant { justify-content: flex-start; }
+
+  .bubble {
+    max-width: 82%; padding: 10px 13px; border-radius: var(--radius-md);
+    font-size: 14.5px; line-height: 1.48; white-space: pre-wrap; word-wrap: break-word;
+  }
+  .row.user .bubble { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+  .row.assistant .bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+  .row.error .bubble { background: rgba(229,72,77,0.08); border: 1px solid rgba(229,72,77,0.4); color: #ffb3b5; border-bottom-left-radius: 4px; }
+
+  .timestamp { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+  .row.user .timestamp { text-align: right; }
+
+  .typing-dots { display: flex; gap: 4px; padding: 4px 2px; }
+  .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: bounce 1.2s infinite ease-in-out; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .typing-dots span { animation: none; opacity: 0.8; } }
+
+  #composer {
+    flex: 0 0 auto; display: flex; align-items: flex-end; gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border);
+  }
+  #composer textarea {
+    flex: 1 1 auto; resize: none; max-height: 120px; min-height: 40px;
+    padding: 10px 13px; border-radius: var(--radius-md);
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    font-family: var(--font-body); font-size: 14.5px; line-height: 1.4;
+  }
+  #composer textarea:focus { outline: none; border-color: var(--accent); }
+  /* Koin bitəndə yazı sahəsinin üstündə çıxan xəbərdarlıq zolağı */
+  #coin-lock-banner {
+    display: none;
+    background: rgba(232,163,61,0.1);
+    border-top: 1px solid rgba(232,163,61,0.3);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-align: center;
+    padding: 8px 12px;
+  }
+  #msg-input:disabled, #send-btn:disabled { opacity: 0.4; }
+
+  #send-btn {
+    flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%;
+    border: none; background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  #send-btn:disabled { opacity: 0.45; cursor: default; }
+  #send-btn svg { width: 19px; height: 19px; }
+
+  /* ================= TƏNZİMLƏMƏLƏR PANELİ ================= */
+  #settings-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: flex-end; z-index: 20;
+  }
+  #settings-overlay.open { display: flex; }
+
+  #settings-sheet {
+    width: 100%; background: var(--surface); border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 12px;
+    max-height: 85vh; overflow-y: auto;
+  }
+
+  #settings-sheet h2 { margin: 0 0 2px; font-size: 15px; }
+  #settings-sheet .hint { font-size: 12px; color: var(--text-muted); margin: -6px 0 4px; line-height: 1.4; }
+
+  .account-box {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 4px;
+  }
+  .account-box .email { font-size: 12.5px; color: var(--text); word-break: break-all; }
+  .account-box .email-label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px; }
+
+  .field label { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+  .field input, .field textarea {
+    width: 100%; padding: 9px 11px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    font-family: var(--font-body); font-size: 13.5px;
+  }
+  .field textarea { resize: vertical; min-height: 60px; }
+
+  .sheet-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .btn {
+    flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); font-size: 13.5px; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.danger-outline { color: #ffb3b5; border-color: rgba(229,72,77,0.4); }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= YÜKLƏNMƏ EKRANI ================= -->
+  <div id="loading-screen">yüklənir…</div>
+
+  <!-- ================= GİRİŞ / QEYDİYYAT EKRANI ================= -->
+  <div id="auth-screen">
+    <div class="auth-card">
+      <div class="glyph">&gt;_</div>
+      <h1>Qwen Chat-ə xoş gəldin</h1>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tab-login">Giriş</button>
+        <button type="button" class="auth-tab" id="tab-register">Qeydiyyat</button>
+      </div>
+
+      <div id="auth-error"></div>
+
+      <form id="auth-form">
+        <div class="field">
+          <label for="auth-email">EMAIL</label>
+          <input id="auth-email" type="email" required autocomplete="email" placeholder="sen@example.com" />
+        </div>
+        <div class="field">
+          <label for="auth-password">ŞİFRƏ</label>
+          <input id="auth-password" type="password" required autocomplete="current-password" placeholder="ən azı 6 simvol" minlength="6" />
+        </div>
+        <button type="submit" id="auth-submit">Giriş et</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= ÇAT EKRANI ================= -->
+  <div id="chat-screen">
+
+    <header>
+      <div class="header-titles">
+        <span class="eyebrow">Prototip · FastAPI + Firebase</span>
+        <h1>Qwen Chat</h1>
+        <span class="coin-badge" id="coin-badge">🪙 —</span>
+      </div>
+      <div class="status-pill">
+        <span id="status-dot" class="status-dot checking"></span>
+        <span id="status-text">yoxlanılır…</span>
+      </div>
+      <button class="icon-btn" id="settings-btn" aria-label="Tənzimləmələr">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <div id="chat-messages">
+      <div class="empty-state" id="empty-state">
+        <div class="glyph">&gt;_</div>
+        <p>Hələ mesaj yoxdur.<br>Aşağıdan yaz və ya nümunələrdən birini seç:</p>
+        <div class="chip-row">
+          <button class="chip" data-prompt="Süni intellekt nədir, sadə izah et">Süni intellekt nədir?</button>
+          <button class="chip" data-prompt="FastAPI nədir və nə üçün istifadə olunur?">FastAPI nədir?</button>
+          <button class="chip" data-prompt="Mənə proqramlaşdırma haqqında qısa bir zarafat de">Zarafat de</button>
+        </div>
+      </div>
+    </div>
+<div id="coin-lock-banner"></div>
+  <form id="composer">
+      <textarea id="msg-input" rows="1" placeholder="Mesaj yaz…" autocomplete="off"></textarea>
+      <button type="submit" id="send-btn" aria-label="Göndər">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+      </button>
+    </form>
+  </div>
+
+  <!-- ================= TƏNZİMLƏMƏLƏR PANELİ ================= -->
+  <div id="settings-overlay">
+    <div id="settings-sheet">
+      <h2>Tənzimləmələr</h2>
+
+      <div class="account-box">
+        <span>
+          <span class="email-label">HESAB</span>
+          <span class="email" id="account-email">—</span>
+        </span>
+        <button type="button" class="btn danger-outline" style="flex:0 0 auto; padding:8px 12px;" id="logout-btn">Çıxış</button>
+      </div>
+
+      <p class="hint">
+        Kompüterdə test edirsənsə "http://localhost:8000" saxla.
+        Telefondan qoşulmaq istəyirsənsə, backend-in canlı ünvanını
+        (məs. Render linkini) yaz.
+      </p>
+      <div class="field">
+        <label for="api-url-input">BACKEND ÜNVANI (API URL)</label>
+        <input id="api-url-input" type="text" placeholder="API ünvanı daxil et" />
+      </div>
+      <div class="field">
+        <label for="system-prompt-input">SİSTEM TƏLİMATI</label>
+        <textarea id="system-prompt-input" placeholder="Sən köməkçi bir süni intellekt asistentisən."></textarea>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn danger-outline" id="clear-chat-btn">Söhbəti sil</button>
+        <button type="button" class="btn primary" id="save-settings-btn">Yadda saxla</button>
+      </div>
+      <button type="button" class="btn" id="close-settings-btn">Bağla</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================================
+   FIREBASE KONFİQURASİYASI
+   Bu dəyərləri Firebase Console → Project settings → "Your apps" → Web
+   app-dan götür və BURAYA yapışdır. Bunlar "gizli" açarlar deyil —
+   Firebase-in client (brauzer) tərəfi üçün açarları elə belə açıq
+   olmağa nəzərdə tutulub, təhlükəsizlik Firestore Rules ilə təmin olunur.
+===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyD1U2uxHN2TxQBdH1-LWG_iDn9z8_Y168g",
+  authDomain: "qwen-project-1.firebaseapp.com",
+  projectId: "qwen-project-1",
+  storageBucket: "qwen-project-1.firebasestorage.app",
+  messagingSenderId:  "1006283288360",
+  appId: "1:1006283288360:web:2b1e5724ea6279d2ca2a1d",
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* =====================================================================
+   ÜMUMİ KONFİQURASİYA (backend/API)
+===================================================================== */
+const DEFAULT_API_URL = "https://qven-ai-app.onrender.com";
+const DEFAULT_SYSTEM_PROMPT = "Sən köməkçi bir süni intellekt asistentisən.";
+
+const state = {
+  apiUrl: DEFAULT_API_URL,
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  messages: [],    // { role: "user" | "assistant", content: string }
+  isSending: false,
+  coin: 0,           // İstifadəçinin qalan koin sayı (Firestore-dan gəlir)
+  coinResetAt: null, // Koin nə vaxt bitib (Date obyekti və ya null)
+};
+
+let unsubscribeCoinListener = null; // Koin dinləyicisini sonra "söndürmək" üçün
+
+let currentUser = null; // Firebase-dən gələn giriş etmiş istifadəçi obyekti
+
+/* ---- DOM elementlərinə istinadlar ---- */
+const loadingScreen = document.getElementById("loading-screen");
+const authScreen = document.getElementById("auth-screen");
+const chatScreen = document.getElementById("chat-screen");
+
+const authForm = document.getElementById("auth-form");
+const authEmailInput = document.getElementById("auth-email");
+const authPasswordInput = document.getElementById("auth-password");
+const authSubmitBtn = document.getElementById("auth-submit");
+const authErrorEl = document.getElementById("auth-error");
+const tabLogin = document.getElementById("tab-login");
+const tabRegister = document.getElementById("tab-register");
+
+const chatEl = document.getElementById("chat-messages");
+const emptyStateEl = document.getElementById("empty-state");
+const composerEl = document.getElementById("composer");
+const inputEl = document.getElementById("msg-input");
+const sendBtn = document.getElementById("send-btn");
+
+const statusDot = document.getElementById("status-dot");
+const statusText = document.getElementById("status-text");
+
+const settingsBtn = document.getElementById("settings-btn");
+const settingsOverlay = document.getElementById("settings-overlay");
+const closeSettingsBtn = document.getElementById("close-settings-btn");
+const saveSettingsBtn = document.getElementById("save-settings-btn");
+const clearChatBtn = document.getElementById("clear-chat-btn");
+const apiUrlInput = document.getElementById("api-url-input");
+const systemPromptInput = document.getElementById("system-prompt-input");
+const accountEmailEl = document.getElementById("account-email");
+const logoutBtn = document.getElementById("logout-btn");
+const coinBadge = document.getElementById("coin-badge");
+const coinLockBanner = document.getElementById("coin-lock-banner");
+
+/* =====================================================================
+   GİRİŞ / QEYDİYYAT MƏNTİQİ
+===================================================================== */
+
+let authMode = "login"; // "login" | "register"
+
+tabLogin.addEventListener("click", () => setAuthMode("login"));
+tabRegister.addEventListener("click", () => setAuthMode("register"));
+
+function setAuthMode(mode) {
+  authMode = mode;
+  tabLogin.classList.toggle("active", mode === "login");
+  tabRegister.classList.toggle("active", mode === "register");
+  authSubmitBtn.textContent = mode === "login" ? "Giriş et" : "Qeydiyyatdan keç";
+  authErrorEl.style.display = "none";
+}
+
+// Firebase-in texniki xəta kodlarını sadə, anlaşılan Azərbaycanca mesajlara çeviririk
+function friendlyAuthError(error) {
+  const map = {
+    "auth/email-already-in-use": "Bu email artıq qeydiyyatdan keçib — Giriş sekmesinə keç.",
+    "auth/invalid-email": "Email ünvanı düzgün formatda deyil.",
+    "auth/weak-password": "Şifrə ən azı 6 simvol olmalıdır.",
+    "auth/user-not-found": "Bu email ilə hesab tapılmadı.",
+    "auth/wrong-password": "Şifrə səhvdir.",
+    "auth/invalid-credential": "Email və ya şifrə səhvdir.",
+    "auth/too-many-requests": "Çox sayda cəhd oldu, bir az sonra yenidən yoxla.",
+  };
+  return map[error.code] || error.message;
+}
+
+authForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = authEmailInput.value.trim();
+  const password = authPasswordInput.value;
+
+  authSubmitBtn.disabled = true;
+  authErrorEl.style.display = "none";
+
+  try {
+    if (authMode === "register") {
+      // Yeni hesab yaradır
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      // Firestore-da bu istifadəçi üçün bir "profil" sənədi yaradırıq —
+      // dostun Firebase konsolunda users/{uid} altında bunu görəcək.
+      await db.collection("users").doc(cred.user.uid).set({
+        email: email,
+        coin :10,
+        coinResetAt: null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Mövcud hesabla giriş
+      await auth.signInWithEmailAndPassword(email, password);
+    }
+    // Uğurlu olduqda onAuthStateChanged avtomatik işə düşüb çat ekranına keçirəcək
+  } catch (err) {
+    authErrorEl.textContent = friendlyAuthError(err);
+    authErrorEl.style.display = "block";
+  } finally {
+    authSubmitBtn.disabled = false;
+  }
+});
+
+logoutBtn.addEventListener("click", () => {
+  auth.signOut();
+  settingsOverlay.classList.remove("open");
+});
+
+// Firebase-in "istifadəçinin giriş vəziyyəti dəyişdi" hadisəsi.
+// Səhifə açılanda BİR DƏFƏ avtomatik çağırılır (əvvəlki sessiya varsa onu tapır),
+// sonra hər giriş/çıxışda yenidən çağırılır.
+auth.onAuthStateChanged(async (user) => {
+  loadingScreen.style.display = "none";
+
+  if (user) {
+    currentUser = user;
+    accountEmailEl.textContent = user.email;
+    authScreen.classList.remove("visible");
+    chatScreen.classList.add("visible");
+
+    // Bu istifadəçinin əvvəlki söhbət tarixçəsini Firestore-dan yükləyirik
+    await loadMessageHistory();
+    listenToCoinBalance();
+    checkBackendHealth();
+  } else {
+    currentUser = null;
+    chatScreen.classList.remove("visible");
+    authScreen.classList.add("visible");
+  }
+});
+
+/* =====================================================================
+   FIRESTORE: mesaj tarixçəsini oxumaq/yazmaq
+===================================================================== */
+
+// İstifadəçinin əvvəlki mesajlarını Firestore-dan çəkib ekrana çıxarır
+async function loadMessageHistory() {
+  chatEl.querySelectorAll(".row").forEach((el) => el.remove());
+  state.messages = [];
+
+  const snapshot = await db
+    .collection("users").doc(currentUser.uid)
+    .collection("messages")
+    .orderBy("timestamp", "asc")
+    .get();
+
+  if (snapshot.empty) {
+    emptyStateEl.style.display = "block";
+    return;
+  }
+
+  emptyStateEl.style.display = "none";
+  snapshot.forEach((doc) => {
+    const m = doc.data();
+    state.messages.push({ role: m.role, content: m.content });
+    appendBubble(m.role === "user" ? "user" : "assistant", m.content);
+  });
+}
+
+// Tək bir mesajı Firestore-a yazır (həm user, həm assistant mesajları üçün çağırılır)
+async function saveMessageToFirestore(role, content) {
+  if (!currentUser) return;
+  try {
+    await db
+      .collection("users").doc(currentUser.uid)
+      .collection("messages")
+      .add({
+        role: role,
+        content: content,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+  } catch (err) {
+    // Firestore yazısı uğursuz olsa belə, söhbətin özü dayanmasın —
+    // sadəcə konsola qeyd edirik.
+    console.error("Firestore-a yazıla bilmədi:", err);
+  }
+}
+
+  /* =====================================================================
+   KOİN SİSTEMİ
+   Məntiq: hər istifadəçinin Firestore sənədində "coin" (rəqəm) və
+   "coinResetAt" (vaxt möhürü və ya null) sahələri var. onSnapshot bu
+   sənədi CANLI dinləyir — sənəd Firebase konsolunda əl ilə dəyişsə
+   belə, tətbiq özü avtomatik yenilənir.
+===================================================================== */
+
+// İstifadəçinin sənədini canlı dinləyir, hər dəyişiklikdə UI-ni yeniləyir
+function listenToCoinBalance() {
+  if (unsubscribeCoinListener) unsubscribeCoinListener(); // köhnəni söndür
+
+  unsubscribeCoinListener = db.collection("users").doc(currentUser.uid)
+    .onSnapshot(async (docSnap) => {
+      if (!docSnap.exists) return; // sənəd hələ yaranmayıb (qeydiyyatın ilk anı)
+
+      const data = docSnap.data();
+      state.coin = data.coin ?? 0;
+      state.coinResetAt = data.coinResetAt ? data.coinResetAt.toDate() : null;
+
+      // Koin YENİ-YENİ bitibsə (0-dır, amma "bitmə vaxtı" hələ qeyd olunmayıb) —
+      // bir dəfəlik bu vaxtı yazırıq, 1 saatlıq sayğac elə buradan başlayır
+      if (state.coin <= 0 && !state.coinResetAt) {
+        await db.collection("users").doc(currentUser.uid).update({
+          coinResetAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        return; // bu yazının nəticəsi onsuz da yeni snapshot kimi geri gələcək
+      }
+
+      renderCoinUI();
+    });
+}
+
+// Header-dəki nişanı və yazı sahəsinin kilidli/açıq vəziyyətini yeniləyir
+function renderCoinUI() {
+  coinBadge.textContent = "🪙 " + state.coin;
+
+  const locked = isChatLocked();
+  inputEl.disabled = locked;
+  sendBtn.disabled = locked;
+  coinLockBanner.style.display = locked ? "block" : "none";
+
+  if (locked) updateLockCountdownText();
+}
+
+// Hazırda yazmaq qadağandırmı? (koin bitib VƏ 1 saat hələ keçməyib)
+function isChatLocked() {
+  if (state.coin > 0) return false;
+  if (!state.coinResetAt) return true;
+  const reopensAt = state.coinResetAt.getTime() + 60 * 60 * 1000; // +1 saat
+  return Date.now() < reopensAt;
+}
+
+// Bannerdəki "X dəqiqə Y saniyə sonra..." yazısını yeniləyir
+function updateLockCountdownText() {
+  if (!state.coinResetAt) {
+    coinLockBanner.textContent = "Koinləriniz bitib.";
+    return;
+  }
+  const reopensAt = state.coinResetAt.getTime() + 60 * 60 * 1000;
+  const remainingMs = reopensAt - Date.now();
+
+  if (remainingMs <= 0) {
+    tryResetCoins();
+    return;
+  }
+  const mins = Math.floor(remainingMs / 60000);
+  const secs = Math.floor((remainingMs % 60000) / 1000);
+  coinLockBanner.textContent =
+    `Koinləriniz bitib — ${mins} dəq ${secs} san sonra yenidən yaza bilərsiniz.`;
+}
+
+// 1 saat keçibsə, koini 10-a qaytarır
+async function tryResetCoins() {
+  if (!currentUser || !state.coinResetAt) return;
+  const reopensAt = state.coinResetAt.getTime() + 60 * 60 * 1000;
+  if (Date.now() >= reopensAt) {
+    await db.collection("users").doc(currentUser.uid).update({
+      coin: 10,
+      coinResetAt: null,
+    });
+    // onSnapshot bunu avtomatik görüb UI-ni özü yeniləyəcək
+  }
+}
+/* =====================================================================
+   KÖMƏKÇİ FUNKSİYALAR: mesaj balonlarını ekrana çəkmək
+===================================================================== */
+
+function scrollToBottom() { chatEl.scrollTop = chatEl.scrollHeight; }
+function formatTime(date) { return date.toLocaleTimeString("az-AZ", { hour: "2-digit", minute: "2-digit" }); }
+
+function appendBubble(kind, text) {
+  emptyStateEl.style.display = "none";
+
+  const row = document.createElement("div");
+  row.className = "row " + kind;
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+
+  const time = document.createElement("div");
+  time.className = "timestamp";
+  time.textContent = formatTime(new Date());
+
+  const wrapper = document.createElement("div");
+  wrapper.appendChild(bubble);
+  wrapper.appendChild(time);
+  row.appendChild(wrapper);
+
+  chatEl.appendChild(row);
+  scrollToBottom();
+  return row;
+}
+
+function showTypingIndicator() {
+  const row = document.createElement("div");
+  row.className = "row assistant";
+  row.id = "typing-row";
+  row.innerHTML = `<div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  chatEl.appendChild(row);
+  scrollToBottom();
+  return row;
+}
+
+/* =====================================================================
+   BACKEND İLƏ ƏLAQƏ (FastAPI)
+===================================================================== */
+
+async function checkBackendHealth() {
+  statusDot.className = "status-dot checking";
+  statusText.textContent = "yoxlanılır…";
+  try {
+    const res = await fetch(state.apiUrl + "/health", { method: "GET" });
+    if (!res.ok) throw new Error("health check failed");
+    statusDot.className = "status-dot online";
+    statusText.textContent = "qoşulub";
+  } catch (err) {
+    statusDot.className = "status-dot offline";
+    statusText.textContent = "qoşulmayıb";
+  }
+}
+
+async function sendMessageToBackend(userText) {
+  if (isChatLocked()) return; // əlavə təhlükəsizlik — normalda düymə onsuz da kilidli olur
+
+  appendBubble("user", userText);
+  state.messages.push({ role: "user", content: userText });
+  saveMessageToFirestore("user", userText); // Firestore-a da yazırıq (paralel, gözləmirik)
+
+  // Koin sayını 1 azaldırıq. FieldValue.increment(-1) "cari dəyərdən 1 çıx"
+  // deməkdir — əvvəlcə oxuyub-sonra-yazmaqdan daha təhlükəsizdir.
+  db.collection("users").doc(currentUser.uid).update({
+    coin: firebase.firestore.FieldValue.increment(-1),
+  });
+
+  const typingRow = showTypingIndicator();
+  state.isSending = true;
+  sendBtn.disabled = true;
+
+  try {
+    const res = await fetch(state.apiUrl + "/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: state.messages, system_prompt: state.systemPrompt }),
+    });
+
+    const data = await res.json();
+    typingRow.remove();
+
+    if (!res.ok) throw new Error(data.detail || "Naməlum server xətası");
+
+    appendBubble("assistant", data.response);
+    state.messages.push({ role: "assistant", content: data.response });
+    saveMessageToFirestore("assistant", data.response);
+
+  } catch (err) {
+    typingRow.remove();
+    appendBubble("error",
+      "Serverə qoşula bilmədim: " + err.message +
+      "\n\nYoxla: backend işə düşübmü? Tənzimləmələrdəki API ünvanı düzgündürmü?"
+    );
+  } finally {
+    state.isSending = false;
+    sendBtn.disabled = false;
+  }
+}
+
+/* =====================================================================
+   HADİSƏ DİNLƏYİCİLƏRİ
+===================================================================== */
+
+composerEl.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = inputEl.value.trim();
+  if (!text || state.isSending) return;
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  sendMessageToBackend(text);
+});
+
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    composerEl.requestSubmit();
+  }
+});
+
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+});
+
+document.querySelectorAll(".chip").forEach((chip) => {
+  chip.addEventListener("click", () => sendMessageToBackend(chip.dataset.prompt));
+});
+
+settingsBtn.addEventListener("click", () => {
+  apiUrlInput.value = state.apiUrl;
+  systemPromptInput.value = state.systemPrompt;
+  settingsOverlay.classList.add("open");
+});
+closeSettingsBtn.addEventListener("click", () => settingsOverlay.classList.remove("open"));
+settingsOverlay.addEventListener("click", (e) => {
+  if (e.target === settingsOverlay) settingsOverlay.classList.remove("open");
+});
+
+saveSettingsBtn.addEventListener("click", () => {
+  state.apiUrl = apiUrlInput.value.trim().replace(/\/+$/, "") || DEFAULT_API_URL;
+  state.systemPrompt = systemPromptInput.value.trim() || DEFAULT_SYSTEM_PROMPT;
+  settingsOverlay.classList.remove("open");
+  checkBackendHealth();
+});
+
+// Qeyd: bu "Söhbəti sil" yalnız EKRANDAKI görünüşü təmizləyir, Firestore-dakı
+// köhnə mesajları silmir (təhlükəsiz defolt — təsadüfən data itirməmək üçün).
+clearChatBtn.addEventListener("click", () => {
+  state.messages = [];
+  chatEl.querySelectorAll(".row").forEach((el) => el.remove());
+  emptyStateEl.style.display = "block";
+  settingsOverlay.classList.remove("open");
+});
+
+/* =====================================================================
+   BAŞLANĞIC
+===================================================================== */
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  });
+}
+
+setInterval(() => { if (currentUser) checkBackendHealth(); }, 30000);
+setInterval(() => { if (currentUser && isChatLocked()) updateLockCountdownText(); }, 1000);
+</script>
+
+</body>
+</html>
