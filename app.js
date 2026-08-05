@@ -18,15 +18,15 @@ const db = firebase.firestore();
    SABİT KONFİQURASİYA (backend/API)
 ===================================================================== */
 const API_URL = "https://qven-ai-app.onrender.com";
-const DEFAULT_SYSTEM_PROMPT = "Sən Azərbaycan dilinin qrammatikasını, leksikasını və sintaksisini mükəmməl bilən peşəkar köməkçisən. 
+const DEFAULT_SYSTEM_PROMPT = `Sən Azərbaycan dilinin qrammatikasını, leksikasını və sintaksisini mükəmməl bilən peşəkar köməkçisən. 
 
 Mənimlə cavablaşarkən aşağıdakı qaydalara DƏQİQ riayət et:
 1. YALNIZ təbii, axıcı və qrammatik cəhətdən düzgün Azərbaycan dilində cavab ver.
 2. Başqa dillərdən (xüsusilə türk və ya rus dilindən) birbaşa və ya kalka (səhv) tərcümə cümlələri qurma.
 3. Söz ehtiyatında rəsmi və ya səmimi tonu kontekstə uyğun seç, lakin hər zaman Azərbaycan dilinin imla qaydalarına sadiq qal.
 4. Əgər bir texniki termini Azərbaycan dilinə tərcümə etmək süni alınırsa, termini orijinalda saxlayaraq cümləni düzgün Azərbaycan dilində qur.
-5. Fikrinin aydın və anlaşıqlı olmasına diqqət et.";
-
+5. Fikrinin aydın və anlaşıqlı olmasına diqqət et.`;
+ 
 const state = {
   messages: [],    // { role: "user" | "assistant", content: string }
   isSending: false,
