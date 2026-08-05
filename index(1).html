@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Qwen Chat — Prototip</title>
+
+  <!-- PWA: telefonda "Ana ekrana əlavə et" üçün lazımdır -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#12141C" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <!-- Xarici CSS Stil faylı -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= YÜKLƏNMƏ EKRANI ================= -->
+  <div id="loading-screen">yüklənir…</div>
+
+  <!-- ================= GİRİŞ / QEYDİYYAT EKRANI ================= -->
+  <div id="auth-screen">
+    <div class="auth-card">
+      <div class="glyph">&gt;_</div>
+      <h1>Qwen Chat-ə xoş gəldin</h1>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tab-login">Giriş</button>
+        <button type="button" class="auth-tab" id="tab-register">Qeydiyyat</button>
+      </div>
+
+      <div id="auth-error"></div>
+
+      <form id="auth-form">
+        <div class="field">
+          <label for="auth-email">EMAIL</label>
+          <input id="auth-email" type="email" required autocomplete="email" placeholder="sen@example.com" />
+        </div>
+        <div class="field">
+          <label for="auth-password">ŞİFRƏ</label>
+          <input id="auth-password" type="password" required autocomplete="current-password" placeholder="ən azı 6 simvol" minlength="6" />
+        </div>
+        <button type="submit" id="auth-submit">Giriş et</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= ÇAT EKRANI ================= -->
+  <div id="chat-screen">
+
+    <header>
+      <div class="header-titles">
+        <span class="eyebrow">Prototip · FastAPI + Firebase</span>
+        <h1>Qwen Chat</h1>
+        <span class="coin-badge" id="coin-badge">🪙 —</span>
+      </div>
+      <div class="status-pill">
+        <span id="status-dot" class="status-dot checking"></span>
+        <span id="status-text">yoxlanılır…</span>
+      </div>
+      <button class="icon-btn" id="settings-btn" aria-label="Tənzimləmələr">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <div id="chat-messages">
+      <div class="empty-state" id="empty-state">
+        <div class="glyph">&gt;_</div>
+        <p>Hələ mesaj yoxdur.<br>Aşağıdan yaz və ya nümunələrdən birini seç:</p>
+        <div class="chip-row">
+          <button class="chip" data-prompt="Süni intellekt nədir, sadə izah et">Süni intellekt nədir?</button>
+          <button class="chip" data-prompt="FastAPI nədir və nə üçün istifadə olunur?">FastAPI nədir?</button>
+          <button class="chip" data-prompt="Mənə proqramlaşdırma haqqında qısa bir zarafat de">Zarafat de</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="coin-lock-banner"></div>
+
+    <form id="composer">
+      <textarea id="msg-input" rows="1" placeholder="Mesaj yaz…" autocomplete="off"></textarea>
+      <button type="submit" id="send-btn" aria-label="Göndər">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+      </button>
+    </form>
+  </div>
+
+  <!-- ================= TƏNZİMLƏMƏLƏR PANELİ ================= -->
+  <div id="settings-overlay">
+    <div id="settings-sheet">
+      <h2>Tənzimləmələr</h2>
+
+      <div class="account-box">
+        <span>
+          <span class="email-label">HESAB</span>
+          <span class="email" id="account-email">—</span>
+        </span>
+        <button type="button" class="btn danger-outline" style="flex:0 0 auto; padding:8px 12px;" id="logout-btn">Çıxış</button>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn danger-outline" id="clear-chat-btn">Söhbəti sil</button>
+        <button type="button" class="btn" id="close-settings-btn">Bağla</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Xarici JavaScript faylı -->
+<script src="app.js"></script>
+</body>
+</html>
