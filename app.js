@@ -3,7 +3,7 @@
 ===================================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyD1U2uxHN2TxQBdH1-LWG_iDn9z8_Y168g",
-  authDomain: "qwen-project-1.firebaseapp.com",
+  authDomain: "qwen-project.firebaseapp.com",
   projectId: "qwen-project-1",
   storageBucket: "qwen-project-1.firebasestorage.app",
   messagingSenderId:  "1006283288360",
