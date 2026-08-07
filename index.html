@@ -7,7 +7,7 @@
 
   <!-- PWA: telefonda "Ana ekrana əlavə et" üçün lazımdır -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#12141C" />
+  <meta name="theme-color" content="#0D0F17" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -32,7 +32,7 @@
   <div id="auth-screen">
     <div class="auth-card">
       <div class="glyph">&gt;_</div>
-      <h1>Qwen Chat-ə xoş gəldin</h1>
+      <h1>Quantix Aİ-ə xoş gəldin</h1>
 
       <div class="auth-tabs">
         <button type="button" class="auth-tab active" id="tab-login">Giriş</button>
@@ -55,71 +55,184 @@
     </div>
   </div>
 
-  <!-- ================= ÇAT EKRANI ================= -->
+  <!-- ================= ƏSAS QABIQ (giriş sonrası) ================= -->
   <div id="chat-screen">
 
-    <header>
-      <div class="header-titles">
-        <span class="eyebrow">Prototip</span>
-        <h1>Quantix Aİ</h1>
-        <span class="coin-badge" id="coin-badge">🪙 —</span>
-      </div>
-      <div class="status-pill">
-        <span id="status-dot" class="status-dot checking"></span>
-        <span id="status-text">yoxlanılır…</span>
-      </div>
-      <button class="icon-btn" id="settings-btn" aria-label="Tənzimləmələr">
+    <!-- Yuxarı zolaq: hər ekranda sabit qalır. Hər iki düymə hələlik
+         "İşlər aparılır..." göstərir (funksionallıq sonra əlavə olunacaq) -->
+    <header class="topbar">
+      <button class="icon-btn" id="menu-btn" aria-label="Menyu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="18" x2="20" y2="18"></line>
+        </svg>
+      </button>
+      <button class="icon-btn" id="trophy-btn" aria-label="Nailiyyətlər">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"></path>
+          <path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"></path>
         </svg>
       </button>
     </header>
 
-    <div id="chat-messages">
-      <div class="empty-state" id="empty-state">
-        <div class="glyph">&gt;_</div>
-        <p>Hələ mesaj yoxdur.<br>Aşağıdan yaz və ya nümunələrdən birini seç:</p>
-        <div class="chip-row">
-          <button class="chip" data-prompt="Süni intellekt nədir, sadə izah et">Süni intellekt nədir?</button>
-          <button class="chip" data-prompt="FastAPI nədir və nə üçün istifadə olunur?">FastAPI nədir?</button>
-          <button class="chip" data-prompt="Mənə proqramlaşdırma haqqında qısa bir zarafat de">Zarafat de</button>
+    <!-- Bütün ekranlar burada — hər anda yalnız biri (.active) görünür -->
+    <div id="screens">
+
+      <!-- ---- ÇAT (işlək) ---- -->
+      <section class="screen active" id="screen-chat" data-screen="chat">
+        <div class="screen-subheader">
+          <div class="status-pill">
+            <span id="status-dot" class="status-dot checking"></span>
+            <span id="status-text">yoxlanılır…</span>
+          </div>
+          <span class="coin-badge" id="coin-badge">🪙 —</span>
         </div>
-      </div>
+
+        <div id="chat-messages">
+          <div class="empty-state" id="empty-state">
+            <div class="glyph">&gt;_</div>
+            <p>Hələ mesaj yoxdur.<br>Aşağıdan yaz və ya nümunələrdən birini seç:</p>
+            <div class="chip-row">
+              <button class="chip" data-prompt="Süni intellekt nədir, sadə izah et">Süni intellekt nədir?</button>
+              <button class="chip" data-prompt="FastAPI nədir və nə üçün istifadə olunur?">FastAPI nədir?</button>
+              <button class="chip" data-prompt="Mənə proqramlaşdırma haqqında qısa bir zarafat de">Zarafat de</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="coin-lock-banner"></div>
+
+        <form id="composer">
+          <button type="button" class="pill-icon-btn" id="camera-btn" aria-label="Şəkil əlavə et">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </button>
+          <textarea id="msg-input" rows="1" placeholder="Nəsə soruş…" autocomplete="off"></textarea>
+          <button type="button" class="pill-icon-btn" id="mic-btn" aria-label="Səslə yaz">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
+          <button type="submit" id="send-btn" aria-label="Göndər">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z"></path>
+            </svg>
+          </button>
+        </form>
+      </section>
+
+      <!-- ---- YAZI (hələlik placeholder) ---- -->
+      <section class="screen placeholder-screen" id="screen-compose" data-screen="compose">
+        <div class="placeholder-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <p>İşlər aparılır...</p>
+        </div>
+      </section>
+
+      <!-- ---- TAYMER (hələlik placeholder) ---- -->
+      <section class="screen placeholder-screen" id="screen-timer" data-screen="timer">
+        <div class="placeholder-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="13" r="8"></circle>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="13" x2="15" y2="15"></line>
+            <line x1="9" y1="2" x2="15" y2="2"></line>
+            <line x1="12" y1="2" x2="12" y2="5"></line>
+          </svg>
+          <p>İşlər aparılır...</p>
+        </div>
+      </section>
+
+      <!-- ---- STATİSTİKA (hələlik placeholder) ---- -->
+      <section class="screen placeholder-screen" id="screen-stats" data-screen="stats">
+        <div class="placeholder-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+            <line x1="12" y1="20" x2="12" y2="10"></line>
+            <line x1="18" y1="20" x2="18" y2="6"></line>
+          </svg>
+          <p>İşlər aparılır...</p>
+        </div>
+      </section>
+
+      <!-- ---- PROFİL (işlək — köhnə Tənzimləmələr panelinin yerini tutur) ---- -->
+      <section class="screen" id="screen-profile" data-screen="profile">
+        <div class="profile-content">
+          <h2>Profil</h2>
+
+          <div class="account-box">
+            <span>
+              <span class="email-label">HESAB</span>
+              <span class="email" id="account-email">—</span>
+            </span>
+          </div>
+
+          <div class="account-box">
+            <span>
+              <span class="email-label">KOİN BALANSI</span>
+              <span class="email" id="profile-coin">🪙 —</span>
+            </span>
+          </div>
+
+          <div class="sheet-actions">
+            <button type="button" class="btn danger-outline" id="clear-chat-btn">Söhbəti sil</button>
+            <button type="button" class="btn danger-outline" id="logout-btn">Çıxış</button>
+          </div>
+        </div>
+      </section>
+
     </div>
 
-    <div id="coin-lock-banner"></div>
-
-    <form id="composer">
-      <textarea id="msg-input" rows="1" placeholder="Mesaj yaz…" autocomplete="off"></textarea>
-      <button type="submit" id="send-btn" aria-label="Göndər">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="19" x2="12" y2="5"></line>
-          <polyline points="5 12 12 5 19 12"></polyline>
+    <!-- Aşağı naviqasiya: Çat və Profil işləkdir, qalan 3-ü placeholder ekrana keçir -->
+    <nav class="bottom-nav">
+      <button class="nav-tab active" data-tab="chat" aria-label="Söhbət">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
       </button>
-    </form>
+      <button class="nav-tab" data-tab="compose" aria-label="Yazı">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </button>
+      <button class="nav-tab" data-tab="timer" aria-label="Taymer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="13" r="8"></circle>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="13" x2="15" y2="15"></line>
+          <line x1="9" y1="2" x2="15" y2="2"></line>
+          <line x1="12" y1="2" x2="12" y2="5"></line>
+        </svg>
+      </button>
+      <button class="nav-tab" data-tab="stats" aria-label="Statistika">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+          <line x1="12" y1="20" x2="12" y2="10"></line>
+          <line x1="18" y1="20" x2="18" y2="6"></line>
+        </svg>
+      </button>
+      <button class="nav-tab" data-tab="profile" aria-label="Profil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </button>
+    </nav>
+
   </div>
 
-  <!-- ================= TƏNZİMLƏMƏLƏR PANELİ ================= -->
-  <div id="settings-overlay">
-    <div id="settings-sheet">
-      <h2>Tənzimləmələr</h2>
-
-      <div class="account-box">
-        <span>
-          <span class="email-label">HESAB</span>
-          <span class="email" id="account-email">—</span>
-        </span>
-        <button type="button" class="btn danger-outline" style="flex:0 0 auto; padding:8px 12px;" id="logout-btn">Çıxış</button>
-      </div>
-
-      <div class="sheet-actions">
-        <button type="button" class="btn danger-outline" id="clear-chat-btn">Söhbəti sil</button>
-        <button type="button" class="btn" id="close-settings-btn">Bağla</button>
-      </div>
-    </div>
-  </div>
+  <!-- "İşlər aparılır..." kimi qısa bildirişlər üçün -->
+  <div id="toast"></div>
 
 </div>
 

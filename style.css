@@ -1,22 +1,34 @@
 /* =====================================================================
    ÜMUMİ STİLLƏR VƏ DƏYİŞƏNLƏR
+
+   Rəng paleti: narıncı-qara əvəzinə tünd "indiqo/bənövşəyi" aksentli
+   dark tema. Demək olar ki, bütün elementlər aşağıdakı dəyişənlərdən
+   (--accent, --bg və s.) istifadə etdiyi üçün, bu bloku dəyişmək bütün
+   tətbiqin rəngini avtomatik yeniləyir.
 ===================================================================== */
 :root {
-  --bg: #12141c;
-  --surface: #1b1e29;
-  --surface-2: #232838;
-  --border: #2a2f40;
-  --text: #ededf0;
-  --text-muted: #8a8d9a;
-  --accent: #e8a33d;
-  --accent-ink: #241a06;
-  --online: #4fd1c5;
-  --danger: #e5484d;
+  --bg: #212121;
+  --surface: #2f2f2f;
+  --surface-2: #383838;
+  --border: #424242;
+  --text: #ececec;
+  --text-muted: #9e9e9e;
+  
+  /* Neon bənövşəyinin yerinə təmiz ağ/boz aksent */
+  --accent: #ececec; 
+  --accent-soft: #424242;
+  --accent-ink: #212121;
+  
+  /* Parlayan cyan yerinə təbii yaşıl */
+  --online: #10b981; 
+  --danger: #ef4444;
+  
   --radius-lg: 20px;
   --radius-md: 14px;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
+
 
 * { box-sizing: border-box; }
 
@@ -78,7 +90,8 @@ html, body {
   color: var(--accent);
   margin-bottom: 4px;
 }
-.auth-card h1 { margin: 0 0 18px; font-size: 18px; }
+h1 { margin: 0; font-size: 17px; font-weight: 650; }
+.auth-card h1 { font-size: 18px; margin: 0 0 18px; }
 
 .auth-tabs {
   display: flex;
@@ -144,7 +157,7 @@ html, body {
 }
 #auth-submit:disabled { opacity: 0.5; }
 
-/* ================= ÇAT EKRANI ================= */
+/* ================= ƏSAS QABIQ (giriş sonrası hər şey buradadır) ================= */
 #chat-screen {
   display: none;
   flex-direction: column;
@@ -153,25 +166,49 @@ html, body {
 }
 #chat-screen.visible { display: flex; }
 
-header {
+/* ---- Yuxarı zolaq: yalnız 2 ikon (menyu + kubok), foto ilə eyni minimal görünüş ---- */
+.topbar {
   flex: 0 0 auto;
-  padding: 14px 16px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 6px;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icon-btn {
+  background: none; border: none; color: var(--text-muted);
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex: 0 0 auto;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* ---- Ekranlar konteyneri: hər anda yalnız 1 ekran görünür (.active) ---- */
+#screens {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.screen {
+  display: none;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.screen.active { display: flex; }
+
+/* ---- Çat ekranının öz kiçik başlığı: bağlantı statusu + koin ---- */
+.screen-subheader {
+  flex: 0 0 auto;
+  padding: 2px 16px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-}
-
-.header-titles { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.09em;
-  color: var(--text-muted);
-  text-transform: uppercase;
 }
 
 .coin-badge {
@@ -179,9 +216,6 @@ header {
   font-size: 11px;
   color: var(--accent);
 }
-
-h1 { margin: 0; font-size: 17px; font-weight: 650; }
-#auth-screen h1, .auth-card h1 { font-size: 18px; }
 
 .status-pill {
   font-family: var(--font-mono);
@@ -191,7 +225,6 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; }
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  flex: 0 0 auto;
 }
 
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex: 0 0 auto; }
@@ -206,19 +239,10 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; }
 }
 @media (prefers-reduced-motion: reduce) { .status-dot.online { animation: none; } }
 
-.icon-btn {
-  background: none; border: none; color: var(--text-muted);
-  width: 34px; height: 34px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex: 0 0 auto;
-}
-.icon-btn:hover { background: var(--surface-2); color: var(--text); }
-.icon-btn svg { width: 19px; height: 19px; }
-
 #chat-messages {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 16px 14px 8px;
+  padding: 8px 14px 8px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -242,11 +266,27 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; }
 .row.assistant { justify-content: flex-start; }
 
 .bubble {
-  max-width: 82%; padding: 10px 13px; border-radius: var(--radius-md);
-  font-size: 14.5px; line-height: 1.48; white-space: pre-wrap; word-wrap: break-word;
+  padding: 10px 13px;
+  border-radius: var(--radius-md);
+  font-size: 14.5px;
+  line-height: 1.48;
+  box-sizing: border-box;
+  
+  width: fit-content !important;
+  min-width: 70px !important;           /* max-content əvəzinə 70px etdik ki, sonsuz uzanmasın */
+  max-width: 80% !important;            /* Ekranın 80%-ni keçdikdə məcburi aşağı sətrə salsın */
+  
+  overflow-wrap: break-word !important; /* Uzun mətnləri ekrana sığdırmaq üçün */
+  word-break: normal !important;        /* Sözləri ortadan kəsməsin, boşluqlardan bölsün */
+  white-space: pre-wrap !important;
 }
-.row.user .bubble { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
-.row.assistant .bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+
+
+.row.user .bubble { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; margin-left: auto !important;       /* Baloncuğu tam sağa sıxır, lakin max-width-i keçmir */
+  margin-right: 0 !important; }
+.row.assistant .bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; margin-right: auto !important;      /* Baloncuğu tam sola sıxır */
+  margin-left: 0 !important;
+  border-bottom-left-radius: 4px; }
 .row.error .bubble { background: rgba(229,72,77,0.08); border: 1px solid rgba(229,72,77,0.4); color: #ffb3b5; border-bottom-left-radius: 4px; }
 
 .timestamp { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 4px; }
@@ -259,74 +299,122 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; }
 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .typing-dots span { animation: none; opacity: 0.8; } }
 
-#composer {
-  flex: 0 0 auto; display: flex; align-items: flex-end; gap: 8px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-  background: var(--surface); border-top: 1px solid var(--border);
-}
-#composer textarea {
-  flex: 1 1 auto; resize: none; max-height: 120px; min-height: 40px;
-  padding: 10px 13px; border-radius: var(--radius-md);
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  font-family: var(--font-body); font-size: 14.5px; line-height: 1.4;
-}
-#composer textarea:focus { outline: none; border-color: var(--accent); }
-
 #coin-lock-banner {
   display: none;
-  background: rgba(232,163,61,0.1);
-  border-top: 1px solid rgba(232,163,61,0.3);
+  margin: 0 14px;
+  background: rgba(124,111,255,0.1);
+  border: 1px solid rgba(124,111,255,0.3);
+  border-radius: 12px;
   color: var(--accent);
   font-family: var(--font-mono);
   font-size: 12px;
   text-align: center;
   padding: 8px 12px;
 }
+/* ---- Yazı sahəsi: tam dəyirmi "pill", kamera+mikrofon daxildə,
+        göndər düyməsi (sparkle) üstündən asılı vəziyyətdə ---- */
+#composer {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  padding: 6px 8px 6px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+#composer textarea {
+  flex: 1 1 auto; resize: none; max-height: 100px; min-height: 34px;
+  padding: 8px 4px;
+  border: none; background: transparent; color: var(--text);
+  font-family: var(--font-body); font-size: 14.5px; line-height: 1.4;
+}
+#composer textarea:focus { outline: none; }
 #msg-input:disabled, #send-btn:disabled { opacity: 0.4; }
 
+.pill-icon-btn {
+  background: none; border: none; color: var(--text-muted);
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex: 0 0 auto;
+}
+.pill-icon-btn:hover { color: var(--text); }
+.pill-icon-btn svg { width: 18px; height: 18px; }
+
 #send-btn {
-  flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%;
+  width: 40px; height: 40px; border-radius: 50%;
   border: none; background: var(--accent); color: var(--accent-ink);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
+  flex: 0 0 auto;
+  box-shadow: 0 4px 10px rgba(124,111,255,0.3);
 }
-#send-btn:disabled { opacity: 0.45; cursor: default; }
-#send-btn svg { width: 19px; height: 19px; }
+#send-btn:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+#send-btn svg { width: 18px; height: 18px; }
 
-/* ================= TƏNZİMLƏMƏLƏR PANELİ ================= */
-#settings-overlay {
-  position: absolute; inset: 0; background: rgba(0,0,0,0.5);
-  display: none; align-items: flex-end; z-index: 20;
-}
-#settings-overlay.open { display: flex; }
+/* ---- "İşlər aparılır..." placeholder ekranları (Yazı/Taymer/Statistika) ---- */
+.placeholder-screen { align-items: center; justify-content: center; }
+.placeholder-content { text-align: center; color: var(--text-muted); padding: 0 30px; }
+.placeholder-content svg { width: 38px; height: 38px; color: var(--accent); margin-bottom: 14px; }
+.placeholder-content p { font-family: var(--font-mono); font-size: 13.5px; margin: 0; }
 
-#settings-sheet {
-  width: 100%; background: var(--surface); border-top: 1px solid var(--border);
-  border-radius: 20px 20px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
-  display: flex; flex-direction: column; gap: 12px;
-  max-height: 85vh; overflow-y: auto;
-}
-
-#settings-sheet h2 { margin: 0 0 2px; font-size: 15px; }
+/* ---- Profil ekranı ---- */
+.profile-content { padding: 22px 18px; display: flex; flex-direction: column; gap: 12px; }
+.profile-content h2 { margin: 0 0 6px; font-size: 18px; }
 
 .account-box {
   display: flex; align-items: center; justify-content: space-between;
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 12px; margin-bottom: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
 }
-.account-box .email { font-size: 12.5px; color: var(--text); word-break: break-all; }
-.account-box .email-label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px; }
-
-.field label { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
-.field input, .field textarea {
-  width: 100%; padding: 9px 11px; border-radius: 10px;
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  font-family: var(--font-body); font-size: 13.5px;
-}
+.account-box .email { font-size: 13px; color: var(--text); word-break: break-all; }
+.account-box .email-label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 3px; }
 
 .sheet-actions { display: flex; gap: 8px; margin-top: 6px; }
 .btn {
-  flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--surface-2); color: var(--text); font-size: 13.5px; cursor: pointer;
+  flex: 1; padding: 11px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 13.5px; cursor: pointer;
 }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 .btn.danger-outline { color: #ffb3b5; border-color: rgba(229,72,77,0.4); }
+
+/* ---- Aşağı naviqasiya paneli (5 ikon) ---- */
+.bottom-nav {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.nav-tab {
+  background: none; border: none; color: var(--text-muted);
+  width: 48px; height: 40px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.nav-tab svg { width: 22px; height: 22px; }
+.nav-tab.active { background: var(--accent-soft); color: var(--accent); }
+
+/* ---- Toast bildirişi: "İşlər aparılır..." kimi qısa mesajlar üçün ---- */
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 60;
+  white-space: nowrap;
+}
+#toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }

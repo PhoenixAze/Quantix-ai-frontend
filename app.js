@@ -59,14 +59,21 @@ const sendBtn = document.getElementById("send-btn");
 const statusDot = document.getElementById("status-dot");
 const statusText = document.getElementById("status-text");
 
-const settingsBtn = document.getElementById("settings-btn");
-const settingsOverlay = document.getElementById("settings-overlay");
-const closeSettingsBtn = document.getElementById("close-settings-btn");
 const clearChatBtn = document.getElementById("clear-chat-btn");
 const accountEmailEl = document.getElementById("account-email");
 const logoutBtn = document.getElementById("logout-btn");
 const coinBadge = document.getElementById("coin-badge");
+const profileCoinEl = document.getElementById("profile-coin");
 const coinLockBanner = document.getElementById("coin-lock-banner");
+
+// Yeni naviqasiya elementləri
+const menuBtn = document.getElementById("menu-btn");
+const trophyBtn = document.getElementById("trophy-btn");
+const cameraBtn = document.getElementById("camera-btn");
+const micBtn = document.getElementById("mic-btn");
+const navTabs = document.querySelectorAll(".nav-tab");
+const screens = document.querySelectorAll(".screen");
+const toastEl = document.getElementById("toast");
 
 /* =====================================================================
    GİRİŞ / QEYDİYYAT MƏNTİQİ
@@ -129,7 +136,6 @@ authForm.addEventListener("submit", async (e) => {
 
 logoutBtn.addEventListener("click", () => {
   auth.signOut();
-  settingsOverlay.classList.remove("open");
 });
 
 // Auth vəziyyətini izləyirik
@@ -223,6 +229,7 @@ function listenToCoinBalance() {
 
 function renderCoinUI() {
   coinBadge.textContent = "🪙 " + state.coin;
+  profileCoinEl.textContent = "🪙 " + state.coin;
 
   const locked = isChatLocked();
   inputEl.disabled = locked;
@@ -396,20 +403,48 @@ document.querySelectorAll(".chip").forEach((chip) => {
   chip.addEventListener("click", () => sendMessageToBackend(chip.dataset.prompt));
 });
 
-settingsBtn.addEventListener("click", () => {
-  settingsOverlay.classList.add("open");
-});
-closeSettingsBtn.addEventListener("click", () => settingsOverlay.classList.remove("open"));
-settingsOverlay.addEventListener("click", (e) => {
-  if (e.target === settingsOverlay) settingsOverlay.classList.remove("open");
-});
-
 clearChatBtn.addEventListener("click", () => {
   state.messages = [];
   chatEl.querySelectorAll(".row").forEach((el) => el.remove());
   emptyStateEl.style.display = "block";
-  settingsOverlay.classList.remove("open");
 });
+
+/* =====================================================================
+   NAVİQASİYA: yuxarı zolaq (topbar) + aşağı tab paneli (bottom-nav) + toast
+===================================================================== */
+
+let toastTimer = null;
+
+// Ekranın altında qısa müddətə görünüb yox olan kiçik bir bildiriş göstərir.
+// "İşlər aparılır..." kimi hələ hazır olmayan bölmələr üçün istifadə olunur.
+function showToast(message) {
+  toastEl.textContent = message;
+  toastEl.classList.add("visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("visible"), 2000);
+}
+
+// Verilən ada uyğun ekranı göstərir, qalanlarını gizlədir, aşağı
+// paneldə də uyğun ikonu "aktiv" (işıqlı) edir.
+function switchScreen(name) {
+  screens.forEach((s) => s.classList.toggle("active", s.dataset.screen === name));
+  navTabs.forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+}
+
+// Aşağı paneldəki 5 ikon: Çat və Profil əsl ekranlara keçir,
+// qalan 3-ü (Yazı/Taymer/Statistika) hələlik placeholder ekranını göstərir —
+// funksionallıq əlavə olunana qədər hər ikisi eyni koddan keçir, sadəcə
+// həmin ekranların içi "İşlər aparılır..." yazısıdır.
+navTabs.forEach((tab) => {
+  tab.addEventListener("click", () => switchScreen(tab.dataset.tab));
+});
+
+// Yuxarı zolaqdakı 2 ikon (menyu, kubok) və composer-dəki kamera/mikrofon —
+// bunların hələ funksiyası yoxdur, sadəcə məlumatlandırıcı bildiriş göstərir.
+menuBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
+trophyBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
+cameraBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
+micBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
 
 /* =====================================================================
    BAŞLANĞIC
