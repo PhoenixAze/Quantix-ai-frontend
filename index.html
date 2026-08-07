@@ -2,7 +2,7 @@
 <html lang="az">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>Quantix Aİ — Prototip</title>
 
   <!-- PWA: telefonda "Ana ekrana əlavə et" üçün lazımdır -->
@@ -76,6 +76,29 @@
       </button>
     </header>
 
+    <!-- Söhbət tarixçəsi paneli: ☰ basanda soldan sürüşərək açılır -->
+    <div id="history-overlay">
+      <aside id="history-drawer">
+        <div class="drawer-header">
+          <span class="drawer-title">Söhbətlər</span>
+          <button class="icon-btn" id="close-history-btn" aria-label="Bağla">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <button class="new-chat-btn" id="new-chat-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Yeni söhbət
+        </button>
+        <div class="history-list" id="history-list"></div>
+      </aside>
+    </div>
+
     <!-- Bütün ekranlar burada — hər anda yalnız biri (.active) görünür -->
     <div id="screens">
 
@@ -111,17 +134,16 @@
             </svg>
           </button>
           <textarea id="msg-input" rows="1" placeholder="Nəsə soruş…" autocomplete="off"></textarea>
-          <button type="button" class="pill-icon-btn" id="mic-btn" aria-label="Səslə yaz">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <button type="button" class="pill-icon-btn" id="mic-send-btn" aria-label="Səslə yaz">
+            <svg class="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
               <line x1="12" y1="19" x2="12" y2="23"></line>
               <line x1="8" y1="23" x2="16" y2="23"></line>
             </svg>
-          </button>
-          <button type="submit" id="send-btn" aria-label="Göndər">
-            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z"></path>
+            <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5"></line>
+              <polyline points="5 12 12 5 19 12"></polyline>
             </svg>
           </button>
         </form>

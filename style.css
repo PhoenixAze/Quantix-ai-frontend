@@ -185,6 +185,92 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
 .icon-btn svg { width: 20px; height: 20px; }
 
+/* ---- Söhbət tarixçəsi paneli (Claude/ChatGPT tərzi sürüşən "drawer") ---- */
+#history-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index: 40;
+}
+#history-overlay.open { display: block; }
+
+#history-drawer {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 78%;
+  max-width: 300px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+}
+#history-overlay.open #history-drawer { transform: translateX(0); }
+
+.drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 4px 6px;
+}
+.drawer-title { font-size: 15px; font-weight: 650; color: var(--text); }
+
+.new-chat-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13.5px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+.new-chat-btn svg { width: 16px; height: 16px; color: var(--accent); flex: 0 0 auto; }
+
+.history-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.history-item {
+  text-align: left;
+  padding: 10px 10px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+.history-item:hover { background: var(--surface-2); }
+.history-item.active { background: var(--accent-soft); }
+.history-item .title {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item .date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.history-empty {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  text-align: center;
+  padding: 24px 10px;
+  font-family: var(--font-mono);
+}
+
 /* ---- Ekranlar konteyneri: hər anda yalnız 1 ekran görünür (.active) ---- */
 #screens {
   flex: 1 1 auto;
@@ -332,26 +418,28 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; }
   font-family: var(--font-body); font-size: 14.5px; line-height: 1.4;
 }
 #composer textarea:focus { outline: none; }
-#msg-input:disabled, #send-btn:disabled { opacity: 0.4; }
+#msg-input:disabled, #mic-send-btn:disabled { opacity: 0.4; }
 
 .pill-icon-btn {
   background: none; border: none; color: var(--text-muted);
   width: 32px; height: 32px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex: 0 0 auto;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .pill-icon-btn:hover { color: var(--text); }
 .pill-icon-btn svg { width: 18px; height: 18px; }
 
-#send-btn {
-  width: 40px; height: 40px; border-radius: 50%;
-  border: none; background: var(--accent); color: var(--accent-ink);
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  flex: 0 0 auto;
-  box-shadow: 0 4px 10px rgba(124,111,255,0.3);
+/* Mikrofon/Göndər ikili düyməsi: defolt olaraq mikrofon ikonu göstərir.
+   Yazı sahəsində mətn olanda JS "is-send" class-ını əlavə edir — bu da
+   ikonu ox işarəsinə çevirir və düyməni aksent rəngə boyayır. */
+#mic-send-btn .icon-send { display: none; }
+#mic-send-btn.is-send .icon-mic { display: none; }
+#mic-send-btn.is-send .icon-send { display: block; }
+#mic-send-btn.is-send {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
-#send-btn:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
-#send-btn svg { width: 18px; height: 18px; }
 
 /* ---- "İşlər aparılır..." placeholder ekranları (Yazı/Taymer/Statistika) ---- */
 .placeholder-screen { align-items: center; justify-content: center; }

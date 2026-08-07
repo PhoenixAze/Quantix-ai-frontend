@@ -32,6 +32,7 @@ const state = {
   isSending: false,
   coin: 0,           // İstifadəçinin qalan koin sayı (Firestore-dan gəlir)
   coinResetAt: null, // Koin nə vaxt bitib (Date obyekti və ya null)
+  currentConversationId: null, // Hazırda hansı söhbətdəyik (yeni söhbətdə null olur)
 };
 
 let unsubscribeCoinListener = null; // Koin dinləyicisini sonra söndürmək üçün
@@ -54,7 +55,7 @@ const chatEl = document.getElementById("chat-messages");
 const emptyStateEl = document.getElementById("empty-state");
 const composerEl = document.getElementById("composer");
 const inputEl = document.getElementById("msg-input");
-const sendBtn = document.getElementById("send-btn");
+const micSendBtn = document.getElementById("mic-send-btn");
 
 const statusDot = document.getElementById("status-dot");
 const statusText = document.getElementById("status-text");
@@ -70,10 +71,16 @@ const coinLockBanner = document.getElementById("coin-lock-banner");
 const menuBtn = document.getElementById("menu-btn");
 const trophyBtn = document.getElementById("trophy-btn");
 const cameraBtn = document.getElementById("camera-btn");
-const micBtn = document.getElementById("mic-btn");
 const navTabs = document.querySelectorAll(".nav-tab");
 const screens = document.querySelectorAll(".screen");
 const toastEl = document.getElementById("toast");
+const appEl = document.getElementById("app");
+
+// Söhbət tarixçəsi paneli elementləri
+const historyOverlay = document.getElementById("history-overlay");
+const closeHistoryBtn = document.getElementById("close-history-btn");
+const newChatBtn = document.getElementById("new-chat-btn");
+const historyListEl = document.getElementById("history-list");
 
 /* =====================================================================
    GİRİŞ / QEYDİYYAT MƏNTİQİ
@@ -148,7 +155,7 @@ auth.onAuthStateChanged(async (user) => {
     authScreen.classList.remove("visible");
     chatScreen.classList.add("visible");
 
-    await loadMessageHistory();
+    startNewConversation(); // hər girişdə təzə söhbətlə başlayırıq, köhnələr ☰-də qalır
     listenToCoinBalance();
     checkBackendHealth();
   } else {
@@ -159,15 +166,32 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 /* =====================================================================
-   FIRESTORE: mesaj tarixçəsini oxumaq/yazmaq
+   FIRESTORE: söhbətlər və mesajlar
+
+   Quruluş:
+   users/{uid}/conversations/{conversationId}                → { title, createdAt, updatedAt }
+   users/{uid}/conversations/{conversationId}/messages/{id}  → { role, content, timestamp }
 ===================================================================== */
 
-async function loadMessageHistory() {
-  chatEl.querySelectorAll(".row").forEach((el) => el.remove());
+// Ekranı təmizləyir və "hazırkı söhbət yoxdur" vəziyyətinə qaytarır.
+// Növbəti mesaj göndəriləndə saveMessageToFirestore YENİ bir söhbət yaradacaq.
+function startNewConversation() {
+  state.currentConversationId = null;
   state.messages = [];
+  chatEl.querySelectorAll(".row").forEach((el) => el.remove());
+  emptyStateEl.style.display = "block";
+}
+
+// Verilmiş id-li söhbəti açır: mesajlarını Firestore-dan çəkib ekrana yazır
+async function openConversation(conversationId) {
+  state.currentConversationId = conversationId;
+  state.messages = [];
+  chatEl.querySelectorAll(".row").forEach((el) => el.remove());
+  closeHistoryDrawer();
 
   const snapshot = await db
     .collection("users").doc(currentUser.uid)
+    .collection("conversations").doc(conversationId)
     .collection("messages")
     .orderBy("timestamp", "asc")
     .get();
@@ -185,11 +209,35 @@ async function loadMessageHistory() {
   });
 }
 
+// Bir mesajı Firestore-a yazır. Bu, cari söhbətin İLK mesajıdırsa
+// (currentConversationId hələ null-dursa), əvvəlcə yeni bir "söhbət"
+// sənədi yaradır və başlığını mesajın özündən düzəldir.
 async function saveMessageToFirestore(role, content) {
   if (!currentUser) return;
   try {
+    if (!state.currentConversationId) {
+      const title = content.length > 40 ? content.slice(0, 40) + "…" : content;
+      const convRef = await db
+        .collection("users").doc(currentUser.uid)
+        .collection("conversations")
+        .add({
+          title: title,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      state.currentConversationId = convRef.id;
+    } else {
+      // Söhbət artıq mövcuddur — sadəcə "son yenilənmə" vaxtını təzələyirik ki,
+      // tarixçə siyahısında ən son yazışdığın söhbət başda görünsün
+      await db
+        .collection("users").doc(currentUser.uid)
+        .collection("conversations").doc(state.currentConversationId)
+        .update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+
     await db
       .collection("users").doc(currentUser.uid)
+      .collection("conversations").doc(state.currentConversationId)
       .collection("messages")
       .add({
         role: role,
@@ -199,6 +247,62 @@ async function saveMessageToFirestore(role, content) {
   } catch (err) {
     console.error("Firestore-a yazıla bilmədi:", err);
   }
+}
+
+/* ---- ☰ Tarixçə paneli: açmaq/bağlamaq və siyahını doldurmaq ---- */
+
+function openHistoryDrawer() {
+  historyOverlay.classList.add("open");
+  loadConversationList();
+}
+function closeHistoryDrawer() {
+  historyOverlay.classList.remove("open");
+}
+
+// Söhbətin tarixini göstərir: bu gündürsə saat, deyilsə tarix+saat
+function formatHistoryDate(date) {
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const time = date.toLocaleTimeString("az-AZ", { hour: "2-digit", minute: "2-digit" });
+  if (isToday) return time;
+  return date.toLocaleDateString("az-AZ", { day: "2-digit", month: "2-digit" }) + " " + time;
+}
+
+// Mətni innerHTML-ə yazmazdan əvvəl "təmizləyir" — istifadəçi mesajının
+// içində < > kimi işarələr olsa belə, bu HTML kimi şərh olunmasın deyə
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Keçmiş söhbətlərin siyahısını Firestore-dan çəkib panelə yazır
+async function loadConversationList() {
+  historyListEl.innerHTML = `<div class="history-empty">yüklənir…</div>`;
+
+  const snapshot = await db
+    .collection("users").doc(currentUser.uid)
+    .collection("conversations")
+    .orderBy("updatedAt", "desc")
+    .get();
+
+  if (snapshot.empty) {
+    historyListEl.innerHTML = `<div class="history-empty">Hələ söhbət tarixçəsi yoxdur</div>`;
+    return;
+  }
+
+  historyListEl.innerHTML = "";
+  snapshot.forEach((doc) => {
+    const conv = doc.data();
+    const btn = document.createElement("button");
+    btn.className = "history-item" + (doc.id === state.currentConversationId ? " active" : "");
+    btn.innerHTML = `
+      <span class="title">${escapeHtml(conv.title || "Adsız söhbət")}</span>
+      <span class="date">${conv.updatedAt ? formatHistoryDate(conv.updatedAt.toDate()) : ""}</span>
+    `;
+    btn.addEventListener("click", () => openConversation(doc.id));
+    historyListEl.appendChild(btn);
+  });
 }
 
 /* =====================================================================
@@ -233,7 +337,7 @@ function renderCoinUI() {
 
   const locked = isChatLocked();
   inputEl.disabled = locked;
-  sendBtn.disabled = locked;
+  micSendBtn.disabled = locked;
   coinLockBanner.style.display = locked ? "block" : "none";
 
   if (locked) updateLockCountdownText();
@@ -339,7 +443,10 @@ async function sendMessageToBackend(userText) {
 
   appendBubble("user", userText);
   state.messages.push({ role: "user", content: userText });
-  saveMessageToFirestore("user", userText);
+  // Bunu GÖZLƏYİRİK (await) — əgər bu, söhbətin ilk mesajıdırsa, yeni
+  // söhbət sənədi məhz bu addımda yaranır. AI cavabını bir az aşağıda
+  // eyni söhbətə yazacağıq, ona görə əvvəlcə bunun bitməsi lazımdır.
+  await saveMessageToFirestore("user", userText);
 
   db.collection("users").doc(currentUser.uid).update({
     coin: firebase.firestore.FieldValue.increment(-1),
@@ -347,7 +454,7 @@ async function sendMessageToBackend(userText) {
 
   const typingRow = showTypingIndicator();
   state.isSending = true;
-  sendBtn.disabled = true;
+  micSendBtn.disabled = true;
 
   try {
     const res = await fetch(API_URL + "/api/chat", {
@@ -370,7 +477,7 @@ async function sendMessageToBackend(userText) {
     appendBubble("error", "Serverə qoşula bilmədim: " + err.message);
   } finally {
     state.isSending = false;
-    sendBtn.disabled = false;
+    micSendBtn.disabled = false;
   }
 }
 
@@ -384,6 +491,8 @@ composerEl.addEventListener("submit", (e) => {
   if (!text || state.isSending) return;
   inputEl.value = "";
   inputEl.style.height = "auto";
+  micSendBtn.classList.remove("is-send"); // göndərdikdən sonra yenidən mikrofon ikonuna qayıt
+  micSendBtn.setAttribute("aria-label", "Səslə yaz");
   sendMessageToBackend(text);
 });
 
@@ -397,6 +506,11 @@ inputEl.addEventListener("keydown", (e) => {
 inputEl.addEventListener("input", () => {
   inputEl.style.height = "auto";
   inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+
+  // Mətn yazılıbsa mikrofon ikonu göndərmə oxuna çevrilir, boşdursa geri qayıdır
+  const hasText = inputEl.value.trim().length > 0;
+  micSendBtn.classList.toggle("is-send", hasText);
+  micSendBtn.setAttribute("aria-label", hasText ? "Göndər" : "Səslə yaz");
 });
 
 document.querySelectorAll(".chip").forEach((chip) => {
@@ -404,9 +518,7 @@ document.querySelectorAll(".chip").forEach((chip) => {
 });
 
 clearChatBtn.addEventListener("click", () => {
-  state.messages = [];
-  chatEl.querySelectorAll(".row").forEach((el) => el.remove());
-  emptyStateEl.style.display = "block";
+  startNewConversation();
 });
 
 /* =====================================================================
@@ -439,12 +551,63 @@ navTabs.forEach((tab) => {
   tab.addEventListener("click", () => switchScreen(tab.dataset.tab));
 });
 
-// Yuxarı zolaqdakı 2 ikon (menyu, kubok) və composer-dəki kamera/mikrofon —
-// bunların hələ funksiyası yoxdur, sadəcə məlumatlandırıcı bildiriş göstərir.
-menuBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
+// Yuxarı zolaqdakı ☰ artıq söhbət tarixçəsi panelini açır (əvvəlcə toast idi).
+// 🏆 kubok və composer-dəki kamera düyməsi hələ də placeholder-dir.
+menuBtn.addEventListener("click", () => openHistoryDrawer());
 trophyBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
 cameraBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
-micBtn.addEventListener("click", () => showToast("İşlər aparılır..."));
+
+// Tarixçə panelini bağlamaq: X düyməsi və ya qara fonun üstünə klik
+closeHistoryBtn.addEventListener("click", () => closeHistoryDrawer());
+historyOverlay.addEventListener("click", (e) => {
+  if (e.target === historyOverlay) closeHistoryDrawer();
+});
+
+// "+ Yeni söhbət": ekranı təmizləyir, paneli bağlayır
+newChatBtn.addEventListener("click", () => {
+  startNewConversation();
+  closeHistoryDrawer();
+});
+
+// Mikrofon/Göndər ikili düyməsi: yazı sahəsi boşdursa mikrofon funksiyası
+// hələ hazır olmadığı üçün toast göstərir; mətn yazılıbsa (is-send aktivdirsə)
+// eyni composer submit axınını işə salır (Enter düyməsi ilə eyni yol).
+micSendBtn.addEventListener("click", () => {
+  if (micSendBtn.classList.contains("is-send")) {
+    composerEl.requestSubmit();
+  } else {
+    showToast("İşlər aparılır...");
+  }
+});
+
+/* =====================================================================
+   KLAVİATURA UYĞUNLAŞMASI
+   Telefonda klaviatura açılanda mobil brauzerlər səhifənin görünən
+   sahəsini ("visual viewport") kiçildir, amma #app-ın hündürlüyü
+   avtomatik uyğunlaşmadıqda aşağıdakı yazı qutusu klaviaturanın
+   altında "gizlənir". Bunun qarşısını #app-ın hündürlüyünü əl ilə
+   görünən sahəyə bağlayaraq alırıq — nəticədə digər yazışma
+   proqramlarında olduğu kimi ekran klaviaturaya uyğun "bölünür".
+===================================================================== */
+
+function adjustForKeyboard() {
+  if (!window.visualViewport) return;
+  const vv = window.visualViewport;
+  appEl.style.height = vv.height + "px"; // görünən sahə nə qədərdirsə, #app da o qədər
+  scrollToBottom(); // input yuxarı sürüşəndə son mesaj həmişə görünsün
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", adjustForKeyboard);
+  window.visualViewport.addEventListener("scroll", adjustForKeyboard);
+}
+
+// Yazı sahəsinə toxunanda bir az gecikmə ilə yenidən yoxlayırıq —
+// bəzi Android klaviaturalarında ilk açılış anında viewport hələ
+// tam yenilənməmiş olur
+inputEl.addEventListener("focus", () => {
+  setTimeout(adjustForKeyboard, 300);
+});
 
 /* =====================================================================
    BAŞLANĞIC
