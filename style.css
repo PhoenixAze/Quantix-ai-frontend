@@ -339,6 +339,36 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; }
 .empty-state .glyph { font-family: var(--font-mono); font-size: 28px; color: var(--accent); margin-bottom: 10px; }
 .empty-state p { margin: 4px 0 16px; font-size: 14px; line-height: 1.5; }
 
+.mascot {
+  width: 130px;
+  height: auto;
+  display: block;
+  margin: 0 auto 6px;
+}
+
+/* Maskotun "dediyi" danışıq balonu — quyruğu aşağıda, maskota tərəf işarə edir */
+.mascot-bubble {
+  position: relative;
+  display: inline-block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13.5px;
+  padding: 9px 15px;
+  border-radius: 14px;
+  margin-bottom: 10px;
+}
+.mascot-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 7px 7px 0 7px;
+  border-style: solid;
+  border-color: var(--surface) transparent transparent transparent;
+}
+
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .chip {
   font-family: var(--font-mono); font-size: 12px;
