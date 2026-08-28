@@ -159,14 +159,20 @@ auth.onAuthStateChanged(async (user) => {
   if (user) {
     currentUser = user;
     accountEmailEl.textContent = user.email;
+    
+    // Profil avatarı üçün ilk hərfi götür
+    const avatarLetter = user.email.charAt(0).toUpperCase();
+    document.getElementById('profile-avatar-letter').textContent = avatarLetter;
+    document.getElementById('profile-name').textContent = user.email.split('@')[0];
+
     authScreen.classList.remove("visible");
     chatScreen.classList.add("visible");
 
     startNewConversation(); 
     listenToCoinBalance();
     checkBackendHealth();
-    loadLabels(); // Mövzuları yüklə
-    loadStats();  // Statistikanı yüklə
+    loadLabels(); 
+    loadStats();  
   } else {
     currentUser = null;
     chatScreen.classList.remove("visible");
@@ -175,7 +181,7 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 /* =====================================================================
-   ÇAT VƏ FIRESTORE MƏNTİQİ (Qısaldılmış)
+   ÇAT VƏ FIRESTORE MƏNTİQİ
 ===================================================================== */
 function startNewConversation() {
   state.currentConversationId = null;
@@ -219,7 +225,7 @@ function listenToCoinBalance() {
 
 function renderCoinUI() {
   coinBadge.textContent = "🪙 " + state.coin;
-  profileCoinEl.textContent = "🪙 " + state.coin;
+  profileCoinEl.textContent = state.coin;
   const locked = isChatLocked();
   inputEl.disabled = locked;
   micSendBtn.disabled = locked;
@@ -323,7 +329,7 @@ async function sendMessageToBackend(userText) {
    MÖVZU (LABEL) İDARƏETMƏSİ
 ===================================================================== */
 let userLabels = [];
-let activeLabel = null; // { id, name, color }
+let activeLabel = null; 
 
 const openLabelsBtn = document.getElementById('open-labels-btn');
 const activeLabelText = document.getElementById('active-label-text');
@@ -335,11 +341,20 @@ const btnCloseLabels = document.getElementById('btn-close-labels');
 
 const createLabelOverlay = document.getElementById('create-label-overlay');
 const newLabelName = document.getElementById('new-label-name');
-const newLabelColor = document.getElementById('new-label-color');
 const saveNewLabelBtn = document.getElementById('save-new-label-btn');
 const cancelNewLabelBtn = document.getElementById('cancel-new-label-btn');
 
-// Mövzuları Firestore-dan çək
+// Rəng seçimi məntiqi
+let selectedColor = "#F6C959";
+const colorSwatches = document.querySelectorAll('.color-swatch');
+colorSwatches.forEach(swatch => {
+  swatch.addEventListener('click', () => {
+    colorSwatches.forEach(s => s.classList.remove('selected'));
+    swatch.classList.add('selected');
+    selectedColor = swatch.getAttribute('data-color');
+  });
+});
+
 async function loadLabels() {
   if (!currentUser) return;
   try {
@@ -352,14 +367,12 @@ async function loadLabels() {
   } catch (err) { console.error("Mövzular yüklənmədi", err); }
 }
 
-// Mövzuları ekrana (modal) yazdır
 function renderLabelChips() {
   labelChipsContainer.innerHTML = '';
   userLabels.forEach(label => {
     const chip = document.createElement('div');
     chip.className = 'label-chip' + (activeLabel && activeLabel.id === label.id ? ' active' : '');
-    // Rəngi arxa fon kimi yox, skrinşotdakı kimi solğun fon + rəngli mətn edirik
-    chip.style.backgroundColor = label.color + '20'; // 20 = 12% opacity hex
+    chip.style.backgroundColor = label.color + '20'; 
     chip.style.color = label.color;
     chip.innerHTML = `
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"></path></svg>
@@ -376,7 +389,7 @@ function selectLabel(label) {
   openLabelsBtn.style.color = label.color;
   openLabelsBtn.querySelector('svg').style.color = label.color;
   labelsOverlay.classList.remove('open');
-  updateTimerUI(); // Taymerin rəngini yenilə
+  updateTimerUI(); 
 }
 
 openLabelsBtn.addEventListener('click', () => {
@@ -402,12 +415,11 @@ cancelNewLabelBtn.addEventListener('click', () => createLabelOverlay.classList.r
 
 saveNewLabelBtn.addEventListener('click', async () => {
   const name = newLabelName.value.trim();
-  const color = newLabelColor.value;
   if (!name) return showToast("Ad daxil edin");
   
   try {
-    const docRef = await db.collection("users").doc(currentUser.uid).collection("labels").add({ name, color });
-    const newLabel = { id: docRef.id, name, color };
+    const docRef = await db.collection("users").doc(currentUser.uid).collection("labels").add({ name, color: selectedColor });
+    const newLabel = { id: docRef.id, name, color: selectedColor };
     userLabels.push(newLabel);
     createLabelOverlay.classList.remove('open');
     selectLabel(newLabel);
@@ -417,7 +429,7 @@ saveNewLabelBtn.addEventListener('click', async () => {
 
 
 /* =====================================================================
-   TAYMER MƏNTİQİ (DİNAMİK RƏNGLƏR İLƏ)
+   TAYMER MƏNTİQİ
 ===================================================================== */
 const timerDisplay = document.getElementById('timer-display');
 const timerMainBtn = document.getElementById('timer-main-btn');
@@ -484,7 +496,6 @@ function formatTimerTime(totalSeconds) {
 }
 
 function updateTimerUI() {
-  // Rəng təyini: Mövzu seçilibsə onun rəngi, yoxsa standart ağ
   const currentColor = activeLabel ? activeLabel.color : '#ececec';
   
   if (timerMode === 'countdown') {
@@ -496,7 +507,6 @@ function updateTimerUI() {
       timerDisplay.style.color = currentColor;
       timerMainBtn.style.color = currentColor;
     } else {
-      // Fasilə həmişə yaşıl qalır
       gtModeLabel.innerHTML = `<span>Fasilə</span>`;
       gtModeLabel.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
       gtModeLabel.style.color = '#10b981';
@@ -504,7 +514,6 @@ function updateTimerUI() {
       timerMainBtn.style.color = '#10b981';
     }
   } else {
-    // Countup
     timerDisplay.textContent = formatTimerTime(countupTime);
     gtModeLabel.innerHTML = `<span>Xronometr</span>`;
     gtModeLabel.style.backgroundColor = currentColor + '20';
@@ -522,13 +531,15 @@ function updateTimerUI() {
   }
 }
 
-async function saveFocusSession(durationInSeconds) {
+// type: 'focus' və ya 'break'
+async function saveSessionToDB(durationInSeconds, type) {
   if (!currentUser || durationInSeconds < 60) return; 
   try {
     await db.collection("users").doc(currentUser.uid).collection("focus_sessions").add({
       subject: activeLabel ? activeLabel.name : 'Ümumi',
       color: activeLabel ? activeLabel.color : '#ececec',
       duration: durationInSeconds,
+      type: type,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
     loadStats(); 
@@ -538,10 +549,11 @@ async function saveFocusSession(durationInSeconds) {
 function handleCountdownComplete() {
   clearInterval(timerInterval); isTimerRunning = false;
   if (pomodoroState === 'WORK') {
-    saveFocusSession(customFocusTime);
+    saveSessionToDB(customFocusTime, 'focus');
     showToast("Fokus bitdi! Fasilə vaxtıdır ☕");
     pomodoroState = 'BREAK'; timeLeft = customBreakTime;
   } else {
+    saveSessionToDB(customBreakTime, 'break');
     showToast("Fasilə bitdi! Yenidən fokuslanın 🎯");
     pomodoroState = 'WORK'; timeLeft = customFocusTime;
   }
@@ -568,7 +580,7 @@ function stopTimer() {
   clearInterval(timerInterval); isTimerRunning = false;
   if (timerMode === 'countup') {
     if (countupTime > 0) {
-      saveFocusSession(countupTime);
+      saveSessionToDB(countupTime, 'focus');
       if (countupTime >= 60) showToast("Sessiya yadda saxlanıldı");
     }
     countupTime = 0;
@@ -585,90 +597,138 @@ if (timerStopBtn) timerStopBtn.addEventListener('click', stopTimer);
 /* =====================================================================
    STATİSTİKA VƏ CHART.JS
 ===================================================================== */
-let historyChartInstance = null;
+let distributionChartInstance = null;
+
+const tabOverview = document.getElementById('tab-overview');
+const tabTimeline = document.getElementById('tab-timeline');
+const viewOverview = document.getElementById('stats-overview-view');
+const viewTimeline = document.getElementById('stats-timeline-view');
+const timelineList = document.getElementById('timeline-list');
+
+tabOverview.addEventListener('click', () => {
+  tabOverview.classList.add('active'); tabTimeline.classList.remove('active');
+  viewOverview.style.display = 'block'; viewTimeline.style.display = 'none';
+});
+tabTimeline.addEventListener('click', () => {
+  tabTimeline.classList.add('active'); tabOverview.classList.remove('active');
+  viewOverview.style.display = 'none'; viewTimeline.style.display = 'block';
+});
+
+function formatTimelineDate(dateObj) {
+  const months = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"];
+  const d = dateObj.getDate();
+  const m = months[dateObj.getMonth()];
+  const y = dateObj.getFullYear();
+  const time = dateObj.toLocaleTimeString("az-AZ", { hour: "2-digit", minute: "2-digit" });
+  return `${d} ${m} ${y}, ${time}`;
+}
 
 async function loadStats() {
   if (!currentUser) return;
   try {
-    const snapshot = await db.collection("users").doc(currentUser.uid).collection("focus_sessions").get();
+    const snapshot = await db.collection("users").doc(currentUser.uid).collection("focus_sessions").orderBy("timestamp", "desc").get();
     
-    let totalSecs = 0;
+    let totalFocusSecs = 0;
+    let totalBreakSecs = 0;
     let todaySecs = 0;
     let weekSecs = 0;
+    let monthSecs = 0;
     
     const now = new Date();
     const todayStr = now.toDateString();
-    const weekAgo = new Date();
-    weekAgo.setDate(now.getDate() - 7);
+    const weekAgo = new Date(); weekAgo.setDate(now.getDate() - 7);
+    const monthAgo = new Date(); monthAgo.setMonth(now.getMonth() - 1);
 
-    // Qrafik üçün son 7 günün tarixlərini hazırlayırıq (YYYY-MM-DD)
-    const last7Days = [...Array(7)].map((_, i) => {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      return d.toISOString().split('T')[0];
-    }).reverse();
-
-    // Mövzulara görə qruplaşdırılmış data: { "Riyaziyyat": { color: "#...", data: { "2026-08-28": 3600 } } }
     const chartDataByLabel = {};
+    timelineList.innerHTML = '';
 
     snapshot.forEach(doc => {
       const data = doc.data();
       if (!data.timestamp) return;
       const dateObj = data.timestamp.toDate();
-      const dateStr = dateObj.toISOString().split('T')[0];
       
-      totalSecs += data.duration;
-      if (dateObj.toDateString() === todayStr) todaySecs += data.duration;
-      if (dateObj >= weekAgo) weekSecs += data.duration;
+      if (data.type === 'break') {
+        totalBreakSecs += data.duration;
+      } else {
+        // Focus
+        totalFocusSecs += data.duration;
+        if (dateObj.toDateString() === todayStr) todaySecs += data.duration;
+        if (dateObj >= weekAgo) weekSecs += data.duration;
+        if (dateObj >= monthAgo) monthSecs += data.duration;
 
-      // Qrafik məlumatlarını topla
-      if (dateObj >= weekAgo) {
         const lbl = data.subject || 'Ümumi';
         if (!chartDataByLabel[lbl]) {
-          chartDataByLabel[lbl] = { color: data.color || '#ececec', data: {} };
+          chartDataByLabel[lbl] = { color: data.color || '#ececec', duration: 0 };
         }
-        chartDataByLabel[lbl].data[dateStr] = (chartDataByLabel[lbl].data[dateStr] || 0) + data.duration;
+        chartDataByLabel[lbl].duration += data.duration;
+
+        // Timeline üçün render
+        const tlItem = document.createElement('div');
+        tlItem.className = 'timeline-item';
+        tlItem.innerHTML = `
+          <div class="tl-left">
+            <div class="tl-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"></path><path d="M12 7v5l3 3"></path></svg>
+            </div>
+            <div class="tl-info">
+              <span class="tl-duration">${Math.floor(data.duration / 60)}min</span>
+              <span class="tl-date">${formatTimelineDate(dateObj)}</span>
+            </div>
+          </div>
+          <div class="tl-label" style="background: ${data.color}20; color: ${data.color};">${lbl}</div>
+        `;
+        timelineList.appendChild(tlItem);
       }
     });
 
-    // Overview rəqəmlərini yenilə
+    if (timelineList.innerHTML === '') {
+      timelineList.innerHTML = '<div class="history-empty">Hələ heç bir sessiya yoxdur.</div>';
+    }
+
+    // Overview rəqəmləri
     document.getElementById('stat-today').textContent = Math.floor(todaySecs / 60) + 'min';
     document.getElementById('stat-week').textContent = Math.floor(weekSecs / 60) + 'min';
-    document.getElementById('stat-avg').textContent = Math.floor((weekSecs / 7) / 60) + 'min';
-    document.getElementById('stat-total').textContent = `${Math.floor(totalSecs / 3600)}h ${Math.floor((totalSecs % 3600) / 60)}m`;
+    document.getElementById('stat-month').textContent = Math.floor(monthSecs / 60) + 'min';
+    document.getElementById('stat-total').textContent = `${Math.floor(totalFocusSecs / 3600)}h ${Math.floor((totalFocusSecs % 3600) / 60)}m`;
 
-    // Chart.js Datasetlərini qur
-    const datasets = Object.keys(chartDataByLabel).map(lbl => {
-      const labelInfo = chartDataByLabel[lbl];
-      return {
-        label: lbl,
-        backgroundColor: labelInfo.color,
-        data: last7Days.map(date => (labelInfo.data[date] || 0) / 3600) // Saat cinsindən
-      };
-    });
+    // Focus/Break Ratio
+    const totalTime = totalFocusSecs + totalBreakSecs;
+    let focusPct = 0, breakPct = 0;
+    if (totalTime > 0) {
+      focusPct = Math.round((totalFocusSecs / totalTime) * 100);
+      breakPct = Math.round((totalBreakSecs / totalTime) * 100);
+    }
+    document.getElementById('ratio-focus-lbl').textContent = Math.floor(totalFocusSecs / 60) + 'min';
+    document.getElementById('ratio-break-lbl').textContent = Math.floor(totalBreakSecs / 60) + 'min';
+    document.getElementById('ratio-focus-pct').textContent = focusPct + '%';
+    document.getElementById('ratio-break-pct').textContent = breakPct + '%';
+    document.getElementById('ratio-focus-bar').style.width = focusPct + '%';
+    document.getElementById('ratio-break-bar').style.width = breakPct + '%';
 
-    // Qrafiki çək
-    const ctx = document.getElementById('historyChart').getContext('2d');
-    if (historyChartInstance) historyChartInstance.destroy(); // Köhnəni sil
+    // Doughnut Chart
+    const labels = Object.keys(chartDataByLabel);
+    const dataValues = labels.map(lbl => chartDataByLabel[lbl].duration);
+    const bgColors = labels.map(lbl => chartDataByLabel[lbl].color);
+
+    const ctx = document.getElementById('distributionChart').getContext('2d');
+    if (distributionChartInstance) distributionChartInstance.destroy(); 
     
-    // X oxu üçün qısa tarix formatı (məs: "28 Avq")
-    const displayLabels = last7Days.map(d => {
-      const date = new Date(d);
-      return date.getDate() + ' ' + date.toLocaleString('az-AZ', { month: 'short' });
-    });
-
-    historyChartInstance = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: displayLabels, datasets: datasets },
+    distributionChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: dataValues,
+          backgroundColor: bgColors,
+          borderWidth: 0,
+          cutout: '75%'
+        }]
+      },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          x: { stacked: true, grid: { display: false } },
-          y: { stacked: true, grid: { color: '#2c2c2c' }, ticks: { color: '#9e9e9e', callback: (val) => val + ' h' } }
-        },
         plugins: {
-          legend: { display: false }, // Skrinşotda legend yoxdur
-          tooltip: { mode: 'index', intersect: false }
+          legend: { position: 'right', labels: { color: '#ececec', font: { size: 12 } } }
         }
       }
     });
@@ -676,18 +736,6 @@ async function loadStats() {
   } catch (err) { console.error("Statistika yüklənmədi:", err); }
 }
 
-document.getElementById('clear-stats-btn').addEventListener('click', async () => {
-  if(confirm('Bütün statistikanı silmək istədiyinizə əminsiniz?')) {
-    try {
-      const snapshot = await db.collection("users").doc(currentUser.uid).collection("focus_sessions").get();
-      const batch = db.batch();
-      snapshot.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
-      loadStats();
-      showToast('Statistika sıfırlandı');
-    } catch (err) { console.error(err); }
-  }
-});
 
 /* =====================================================================
    DİGƏR HADİSƏ DİNLƏYİCİLƏRİ
@@ -710,10 +758,6 @@ inputEl.addEventListener("input", () => {
   micSendBtn.classList.toggle("is-send", inputEl.value.trim().length > 0);
 });
 
-document.querySelectorAll(".chip").forEach((chip) => {
-  chip.addEventListener("click", () => sendMessageToBackend(chip.dataset.prompt));
-});
-
 clearChatBtn.addEventListener("click", () => startNewConversation());
 
 let toastTimer = null;
@@ -725,10 +769,12 @@ function showToast(message) {
 function switchScreen(name) {
   screens.forEach((s) => s.classList.toggle("active", s.dataset.screen === name));
   navTabs.forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
-  if (name === 'stats') loadStats(); // Statistika ekranı açılanda qrafiki yenilə
+  if (name === 'stats') loadStats(); 
 }
 
 navTabs.forEach((tab) => tab.addEventListener("click", () => switchScreen(tab.dataset.tab)));
+
+// Söhbət tarixçəsi menyusu (☰)
 menuBtn.addEventListener("click", () => openHistoryDrawer());
 closeHistoryBtn.addEventListener("click", () => closeHistoryDrawer());
 historyOverlay.addEventListener("click", (e) => { if (e.target === historyOverlay) closeHistoryDrawer(); });

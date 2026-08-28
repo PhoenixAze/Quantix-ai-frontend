@@ -1,5 +1,5 @@
 :root {
-  --bg: #000000; /* Tam qara fon */
+  --bg: #000000; 
   --surface: #121212;
   --surface-2: #1e1e1e;
   --border: #2c2c2c;
@@ -22,7 +22,7 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
 
 #loading-screen { position: absolute; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 50; font-family: var(--font-mono); color: var(--text-muted); font-size: 13px; }
 
-/* ================= YENİ AUTH EKRANI (Dark UI) ================= */
+/* ================= YENİ AUTH EKRANI ================= */
 #auth-screen { display: none; flex: 1 1 auto; align-items: center; justify-content: center; padding: 24px; }
 #auth-screen.visible { display: flex; }
 .auth-card.dark-ui { width: 100%; max-width: 340px; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 32px 24px; color: var(--text); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
@@ -47,14 +47,15 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
 #auth-error { display: none; background: rgba(229,72,77,0.08); border: 1px solid rgba(229,72,77,0.4); color: #ffb3b5; font-size: 12.5px; padding: 9px 11px; border-radius: 10px; margin-bottom: 12px; line-height: 1.4; }
 
 /* ================= ƏSAS QABIQ ================= */
-#chat-screen { display: none; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+#chat-screen { display: none; flex-direction: column; flex: 1 1 auto; min-height: 0; position: relative; }
 #chat-screen.visible { display: flex; }
-.topbar { flex: 0 0 auto; padding: 14px 16px 6px; background: var(--bg); display: flex; align-items: center; justify-content: space-between; }
+.topbar { flex: 0 0 auto; padding: 14px 16px 6px; background: var(--bg); display: flex; align-items: center; justify-content: space-between; z-index: 10; position: relative; }
 .icon-btn { background: none; border: none; color: var(--text-muted); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: 0 0 auto; }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
 .icon-btn svg { width: 20px; height: 20px; }
 
-#history-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 40; }
+/* Söhbət Tarixçəsi (Z-index düzəldildi) */
+#history-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 100; }
 #history-overlay.open { display: block; }
 #history-drawer { position: absolute; top: 0; left: 0; bottom: 0; width: 78%; max-width: 300px; background: var(--surface); border-right: 1px solid var(--border); padding: 16px 12px; display: flex; flex-direction: column; gap: 8px; transform: translateX(-100%); transition: transform 0.25s ease; }
 #history-overlay.open #history-drawer { transform: translateX(0); }
@@ -89,9 +90,6 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
 .mascot { width: 130px; height: auto; display: block; margin: 0 auto 6px; }
 .mascot-bubble { position: relative; display: inline-block; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 13.5px; padding: 9px 15px; border-radius: 14px; margin-bottom: 10px; }
 .mascot-bubble::after { content: ""; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); border-width: 7px 7px 0 7px; border-style: solid; border-color: var(--surface) transparent transparent transparent; }
-.chip-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.chip { font-family: var(--font-mono); font-size: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 999px; cursor: pointer; }
-.chip:hover { border-color: var(--accent); }
 
 .row { display: flex; }
 .row.user { justify-content: flex-end; }
@@ -138,18 +136,16 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
 .gt-btn-main svg { width: 64px; height: 64px; fill: currentColor; transition: color 0.3s; }
 .gt-btn-stop svg { width: 32px; height: 32px; color: var(--text-muted); }
 
-/* Dinamik Mövzu Seçici Düymə */
 .gt-subject-btn { display: flex; align-items: center; gap: 8px; background: var(--surface-2); padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border); color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .gt-subject-btn svg { width: 16px; height: 16px; }
 .gt-subject-btn:hover { background: var(--surface); }
 
-/* Modallar (Ayarlar, Mövzular) */
-.overlay-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+/* Modallar */
+.overlay-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
 .overlay-modal.open { display: flex; }
-.modal-card { background: #0f1411; /* Skrinşotdakı tünd yaşıl/qara ton */ width: 100%; max-width: 320px; border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
+.modal-card { background: #0f1411; width: 100%; max-width: 320px; border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
 .modal-card h3 { margin: 0 0 20px; font-size: 16px; color: var(--text); font-weight: 500; }
 
-/* Mövzu Çipləri (Label Chips) */
 .label-chips-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
 .label-chip { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: opacity 0.2s; }
 .label-chip svg { width: 16px; height: 16px; }
@@ -157,7 +153,13 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
 .label-chip.active { border-color: currentColor; }
 
 .label-actions { display: flex; flex-direction: column; gap: 16px; align-items: flex-end; }
-.label-action-btn { background: none; border: none; color: #6ee7b7; /* Açıq yaşıl mətn */ font-size: 14px; font-weight: 500; cursor: pointer; padding: 4px 8px; }
+.label-action-btn { background: none; border: none; color: #6ee7b7; font-size: 14px; font-weight: 500; cursor: pointer; padding: 4px 8px; }
+
+/* Rəng Seçimi (Swatches) */
+.color-swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.color-swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.selected { border-color: #fff; transform: scale(1.1); }
 
 /* ================= STATİSTİKA EKRANI ================= */
 .stats-wrapper { padding: 20px; height: 100%; overflow-y: auto; }
@@ -173,27 +175,53 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
 .stat-val { font-size: 14px; color: #6ee7b7; font-weight: 600; }
 .stat-lbl { font-size: 12px; color: var(--text); }
 
-.chart-container { position: relative; height: 250px; width: 100%; margin-top: 10px; }
+.chart-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
 
-/* ================= PROFİL VƏ DİGƏR ================= */
+/* Focus/Break Ratio Bar */
+.ratio-container { display: flex; flex-direction: column; gap: 8px; }
+.ratio-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
+.ratio-bar { width: 100%; height: 12px; background: var(--surface-2); border-radius: 6px; display: flex; overflow: hidden; }
+.ratio-fill { height: 100%; transition: width 0.3s; }
+.ratio-fill.focus { background: #F6C959; }
+.ratio-fill.break { background: #10b981; }
+
+/* Timeline List */
+.timeline-list { display: flex; flex-direction: column; gap: 16px; }
+.timeline-item { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid var(--surface-2); }
+.tl-left { display: flex; align-items: center; gap: 12px; }
+.tl-icon { color: var(--text-muted); }
+.tl-icon svg { width: 18px; height: 18px; }
+.tl-info { display: flex; flex-direction: column; gap: 4px; }
+.tl-duration { font-size: 15px; font-weight: 500; color: var(--text); }
+.tl-date { font-size: 12px; color: var(--text-muted); }
+.tl-label { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+
+/* ================= PROFİL EKRANI (YENİ) ================= */
+.profile-wrapper { padding: 24px 20px; height: 100%; overflow-y: auto; }
+.profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+.profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; }
+.profile-info h3 { margin: 0 0 4px; font-size: 18px; color: var(--text); }
+.profile-info p { margin: 0; font-size: 14px; color: var(--text-muted); }
+
+.profile-menu { display: flex; flex-direction: column; gap: 8px; }
+.profile-menu-item { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--surface); border-radius: 16px; cursor: pointer; transition: background 0.2s; }
+.profile-menu-item:hover { background: var(--surface-2); }
+.pmi-icon { font-size: 20px; }
+.pmi-text { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
+.pmi-value { font-size: 14px; color: var(--text-muted); }
+.pmi-arrow { font-size: 20px; color: var(--text-muted); }
+.text-danger .pmi-text { color: var(--danger); }
+
+/* ================= DİGƏR ================= */
 .placeholder-screen { align-items: center; justify-content: center; }
 .placeholder-content { text-align: center; color: var(--text-muted); padding: 0 30px; }
 .placeholder-content svg { width: 38px; height: 38px; color: var(--accent); margin-bottom: 14px; }
 .placeholder-content p { font-family: var(--font-mono); font-size: 13.5px; margin: 0; }
-
-.profile-content { padding: 22px 18px; display: flex; flex-direction: column; gap: 12px; }
-.profile-content h2 { margin: 0 0 6px; font-size: 18px; }
-.account-box { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-.account-box .email { font-size: 13px; color: var(--text); word-break: break-all; }
-.account-box .email-label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 3px; }
-.sheet-actions { display: flex; gap: 8px; margin-top: 6px; }
-.btn { flex: 1; padding: 11px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13.5px; cursor: pointer; }
-.btn.danger-outline { color: #ffb3b5; border-color: rgba(229,72,77,0.4); }
 
 .bottom-nav { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-around; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); }
 .nav-tab { background: none; border: none; color: var(--text-muted); width: 48px; height: 40px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .nav-tab svg { width: 22px; height: 22px; }
 .nav-tab.active { background: var(--accent-soft); color: var(--accent); }
 
-#toast { position: absolute; left: 50%; bottom: 86px; transform: translateX(-50%) translateY(8px); background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); font-size: 12.5px; padding: 9px 16px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 60; white-space: nowrap; }
+#toast { position: absolute; left: 50%; bottom: 86px; transform: translateX(-50%) translateY(8px); background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); font-size: 12.5px; padding: 9px 16px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 200; white-space: nowrap; }
 #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
