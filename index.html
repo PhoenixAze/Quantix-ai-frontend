@@ -73,7 +73,7 @@
 
   <!-- ================= ƏSAS QABIQ ================= -->
   <div id="chat-screen">
-    <header class="topbar">
+    <header class="topbar" id="main-topbar">
       <button class="icon-btn" id="menu-btn" aria-label="Menyu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
       </button>
@@ -113,13 +113,20 @@
           <div class="empty-state" id="empty-state">
             <div class="mascot-bubble">Salam! Bu gün nə öyrənək? 👋</div>
             <img src="mascot.png" alt="Maskot" class="mascot" onerror="this.style.display='none'" />
-            <!-- Çiplər silindi -->
           </div>
         </div>
 
         <div id="coin-lock-banner"></div>
 
         <form id="composer">
+          <!-- Şəkil önizləmə qutusu -->
+          <div id="image-preview-container">
+            <img id="image-preview" src="" alt="Seçilmiş şəkil" />
+            <button type="button" id="remove-image-btn" aria-label="Şəkli sil">✕</button>
+          </div>
+
+          <input type="file" id="chat-image-input" accept="image/*" style="display: none;" />
+          
           <button type="button" class="pill-icon-btn" id="camera-btn" aria-label="Şəkil əlavə et">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
           </button>
@@ -168,7 +175,6 @@
             </button>
           </div>
 
-          <!-- Dinamik Mövzu Seçici -->
           <button class="gt-subject-btn" id="open-labels-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
             <span id="active-label-text">Mövzu seçin</span>
@@ -197,20 +203,18 @@
         <!-- Mövzu (Label) Seçim Pəncərəsi -->
         <div class="overlay-modal" id="labels-overlay">
           <div class="modal-card label-modal-card">
-            <h3>Select active label</h3>
-            <div class="label-chips-container" id="label-chips-container">
-              <!-- JS ilə bura mövzular əlavə olunacaq -->
-            </div>
+            <h3>Aktiv mövzunu seçin</h3>
+            <div class="label-chips-container" id="label-chips-container"></div>
             
             <div class="label-actions">
-              <button class="label-action-btn" id="btn-clear-label">Clear label</button>
-              <button class="label-action-btn" id="btn-new-label">Create new label</button>
+              <button class="label-action-btn" id="btn-clear-label">Seçimi təmizlə</button>
+              <button class="label-action-btn" id="btn-new-label">Yeni mövzu yarat</button>
               <button class="label-action-btn" id="btn-close-labels" style="color: var(--text-muted);">Bağla</button>
             </div>
           </div>
         </div>
 
-        <!-- Yeni Mövzu Yaratma Pəncərəsi (Qara rəngsiz) -->
+        <!-- Yeni Mövzu Yaratma Pəncərəsi -->
         <div class="overlay-modal" id="create-label-overlay">
           <div class="modal-card">
             <h3>Yeni Mövzu</h3>
@@ -221,12 +225,17 @@
             <div class="field-modern">
               <label>Rəng seçin</label>
               <div class="color-swatches" id="color-swatches">
-                <div class="color-swatch selected" data-color="#F6C959" style="background: #F6C959;"></div>
-                <div class="color-swatch" data-color="#a78bfa" style="background: #a78bfa;"></div>
-                <div class="color-swatch" data-color="#60a5fa" style="background: #60a5fa;"></div>
-                <div class="color-swatch" data-color="#34d399" style="background: #34d399;"></div>
-                <div class="color-swatch" data-color="#f472b6" style="background: #f472b6;"></div>
-                <div class="color-swatch" data-color="#fb923c" style="background: #fb923c;"></div>
+                <!-- 10 ədəd minimalist pastel rəng -->
+                <div class="color-swatch selected" data-color="#F6E095" style="background: #F6E095;"></div>
+                <div class="color-swatch" data-color="#C5B4E3" style="background: #C5B4E3;"></div>
+                <div class="color-swatch" data-color="#8BA1F5" style="background: #8BA1F5;"></div>
+                <div class="color-swatch" data-color="#A7D7C5" style="background: #A7D7C5;"></div>
+                <div class="color-swatch" data-color="#F5B8D4" style="background: #F5B8D4;"></div>
+                <div class="color-swatch" data-color="#F6C59F" style="background: #F6C59F;"></div>
+                <div class="color-swatch" data-color="#94A3B8" style="background: #94A3B8;"></div>
+                <div class="color-swatch" data-color="#F6A8A6" style="background: #F6A8A6;"></div>
+                <div class="color-swatch" data-color="#9AD9DB" style="background: #9AD9DB;"></div>
+                <div class="color-swatch" data-color="#D9F99D" style="background: #D9F99D;"></div>
               </div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 16px;">
@@ -242,62 +251,48 @@
         <div class="stats-wrapper">
           
           <div class="stats-tabs">
-            <button class="stats-tab active" id="tab-overview">Overview</button>
-            <button class="stats-tab" id="tab-timeline">Timeline</button>
+            <button class="stats-tab active" id="tab-overview">Ümumi</button>
+            <button class="stats-tab" id="tab-timeline">Tarixçə</button>
           </div>
 
           <!-- OVERVIEW GÖRÜNÜŞÜ -->
           <div id="stats-overview-view">
-            <div class="stats-section-title">Overview</div>
+            <div class="stats-section-title">Xülasə</div>
             <div class="stats-grid">
               <div class="stat-box">
                 <span class="stat-val" id="stat-today">0min</span>
-                <span class="stat-lbl">Today</span>
+                <span class="stat-lbl">Bu gün</span>
               </div>
               <div class="stat-box">
                 <span class="stat-val" id="stat-week">0min</span>
-                <span class="stat-lbl">Week</span>
+                <span class="stat-lbl">Həftə</span>
               </div>
               <div class="stat-box">
                 <span class="stat-val" id="stat-month">0min</span>
-                <span class="stat-lbl">Month</span>
+                <span class="stat-lbl">Ay</span>
               </div>
               <div class="stat-box">
                 <span class="stat-val" id="stat-total">0h 0m</span>
-                <span class="stat-lbl">Total</span>
+                <span class="stat-lbl">Cəmi</span>
               </div>
             </div>
 
-            <div class="stats-section-title" style="margin-top: 30px;">Focus distribution</div>
+            <!-- Yeni Bar Chart (Günlük Aktivlik) -->
+            <div class="stats-section-title" style="margin-top: 30px;">Son 7 günün aktivliyi</div>
+            <div class="chart-container" style="height: 220px; margin-bottom: 20px;">
+              <canvas id="activityBarChart"></canvas>
+            </div>
+
+            <!-- Dairəvi Chart (Mövzu bölgüsü) -->
+            <div class="stats-section-title" style="margin-top: 30px;">Mövzu bölgüsü</div>
             <div class="chart-container" style="height: 200px;">
               <canvas id="distributionChart"></canvas>
-            </div>
-
-            <div class="stats-section-title" style="margin-top: 30px; display: flex; justify-content: space-between;">
-              <span>Focus/break ratio</span>
-              <span style="font-size: 12px; color: var(--text-muted);">Total</span>
-            </div>
-            <div class="ratio-container">
-              <div class="ratio-labels">
-                <span id="ratio-focus-lbl">0min</span>
-                <span id="ratio-break-lbl">0min</span>
-              </div>
-              <div class="ratio-bar">
-                <div class="ratio-fill focus" id="ratio-focus-bar" style="width: 50%;"></div>
-                <div class="ratio-fill break" id="ratio-break-bar" style="width: 50%;"></div>
-              </div>
-              <div class="ratio-labels">
-                <span id="ratio-focus-pct">0%</span>
-                <span id="ratio-break-pct">0%</span>
-              </div>
             </div>
           </div>
 
           <!-- TIMELINE GÖRÜNÜŞÜ -->
           <div id="stats-timeline-view" style="display: none;">
-            <div class="timeline-list" id="timeline-list">
-              <!-- JS ilə bura sessiyalar əlavə olunacaq -->
-            </div>
+            <div class="timeline-list" id="timeline-list"></div>
           </div>
 
         </div>

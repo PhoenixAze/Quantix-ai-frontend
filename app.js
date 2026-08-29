@@ -65,6 +65,7 @@ const coinBadge = document.getElementById("coin-badge");
 const profileCoinEl = document.getElementById("profile-coin");
 const coinLockBanner = document.getElementById("coin-lock-banner");
 
+const mainTopbar = document.getElementById("main-topbar");
 const menuBtn = document.getElementById("menu-btn");
 const trophyBtn = document.getElementById("trophy-btn");
 const cameraBtn = document.getElementById("camera-btn");
@@ -160,7 +161,6 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     accountEmailEl.textContent = user.email;
     
-    // Profil avatarı üçün ilk hərfi götür
     const avatarLetter = user.email.charAt(0).toUpperCase();
     document.getElementById('profile-avatar-letter').textContent = avatarLetter;
     document.getElementById('profile-name').textContent = user.email.split('@')[0];
@@ -258,18 +258,34 @@ async function tryResetCoins() {
 function scrollToBottom() { chatEl.scrollTop = chatEl.scrollHeight; }
 function formatTime(date) { return date.toLocaleTimeString("az-AZ", { hour: "2-digit", minute: "2-digit" }); }
 
-function appendBubble(kind, text) {
+function appendBubble(kind, text, imageUrl = null) {
   emptyStateEl.style.display = "none";
   const row = document.createElement("div");
   row.className = "row " + kind;
+  
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.textContent = text;
+  
+  if (text) {
+    const textNode = document.createElement("div");
+    textNode.textContent = text;
+    bubble.appendChild(textNode);
+  }
+  
+  if (imageUrl) {
+    const imgNode = document.createElement("img");
+    imgNode.src = imageUrl;
+    bubble.appendChild(imgNode);
+  }
+
   const time = document.createElement("div");
   time.className = "timestamp";
   time.textContent = formatTime(new Date());
+  
   const wrapper = document.createElement("div");
-  wrapper.appendChild(bubble); wrapper.appendChild(time);
+  wrapper.appendChild(bubble); 
+  wrapper.appendChild(time);
+  
   row.appendChild(wrapper);
   chatEl.appendChild(row);
   scrollToBottom();
@@ -296,11 +312,19 @@ async function checkBackendHealth() {
   }
 }
 
-async function sendMessageToBackend(userText) {
+async function sendMessageToBackend(userText, imageUrl = null) {
   if (isChatLocked()) return;
-  appendBubble("user", userText);
-  state.messages.push({ role: "user", content: userText });
-  await saveMessageToFirestore("user", userText);
+  
+  appendBubble("user", userText, imageUrl);
+  
+  // Əgər şəkil varsa, onu da mesaja əlavə edirik (Backend dəstəkləyirsə)
+  let contentToSend = userText;
+  if (imageUrl) {
+    contentToSend += "\n[Şəkil əlavə edildi]";
+  }
+  
+  state.messages.push({ role: "user", content: contentToSend });
+  await saveMessageToFirestore("user", contentToSend);
   db.collection("users").doc(currentUser.uid).update({ coin: firebase.firestore.FieldValue.increment(-1) });
 
   const typingRow = showTypingIndicator();
@@ -326,6 +350,45 @@ async function sendMessageToBackend(userText) {
 }
 
 /* =====================================================================
+   ŞƏKİL YÜKLƏMƏ MƏNTİQİ
+===================================================================== */
+const imageInput = document.getElementById('chat-image-input');
+const imagePreviewContainer = document.getElementById('image-preview-container');
+const imagePreview = document.getElementById('image-preview');
+const removeImageBtn = document.getElementById('remove-image-btn');
+let selectedImageBase64 = null;
+
+cameraBtn.addEventListener('click', () => imageInput.click());
+
+imageInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      selectedImageBase64 = event.target.result;
+      imagePreview.src = selectedImageBase64;
+      imagePreviewContainer.style.display = 'flex';
+      micSendBtn.classList.add("is-send");
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+removeImageBtn.addEventListener('click', () => {
+  clearImageSelection();
+});
+
+function clearImageSelection() {
+  selectedImageBase64 = null;
+  imageInput.value = '';
+  imagePreviewContainer.style.display = 'none';
+  imagePreview.src = '';
+  if (inputEl.value.trim().length === 0) {
+    micSendBtn.classList.remove("is-send");
+  }
+}
+
+/* =====================================================================
    MÖVZU (LABEL) İDARƏETMƏSİ
 ===================================================================== */
 let userLabels = [];
@@ -344,8 +407,7 @@ const newLabelName = document.getElementById('new-label-name');
 const saveNewLabelBtn = document.getElementById('save-new-label-btn');
 const cancelNewLabelBtn = document.getElementById('cancel-new-label-btn');
 
-// Rəng seçimi məntiqi
-let selectedColor = "#F6C959";
+let selectedColor = "#F6E095";
 const colorSwatches = document.querySelectorAll('.color-swatch');
 colorSwatches.forEach(swatch => {
   swatch.addEventListener('click', () => {
@@ -531,7 +593,6 @@ function updateTimerUI() {
   }
 }
 
-// type: 'focus' və ya 'break'
 async function saveSessionToDB(durationInSeconds, type) {
   if (!currentUser || durationInSeconds < 60) return; 
   try {
@@ -598,6 +659,7 @@ if (timerStopBtn) timerStopBtn.addEventListener('click', stopTimer);
    STATİSTİKA VƏ CHART.JS
 ===================================================================== */
 let distributionChartInstance = null;
+let activityChartInstance = null;
 
 const tabOverview = document.getElementById('tab-overview');
 const tabTimeline = document.getElementById('tab-timeline');
@@ -629,7 +691,6 @@ async function loadStats() {
     const snapshot = await db.collection("users").doc(currentUser.uid).collection("focus_sessions").orderBy("timestamp", "desc").get();
     
     let totalFocusSecs = 0;
-    let totalBreakSecs = 0;
     let todaySecs = 0;
     let weekSecs = 0;
     let monthSecs = 0;
@@ -642,19 +703,35 @@ async function loadStats() {
     const chartDataByLabel = {};
     timelineList.innerHTML = '';
 
+    // Son 7 günün məlumatlarını hazırlayırıq (Bar Chart üçün)
+    const last7Days = [];
+    for(let i=6; i>=0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      last7Days.push({
+        dateStr: d.toDateString(),
+        display: `${d.getDate()} ${["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"][d.getMonth()]}`,
+        duration: 0
+      });
+    }
+
     snapshot.forEach(doc => {
       const data = doc.data();
       if (!data.timestamp) return;
       const dateObj = data.timestamp.toDate();
+      const dateStr = dateObj.toDateString();
       
-      if (data.type === 'break') {
-        totalBreakSecs += data.duration;
-      } else {
-        // Focus
+      if (data.type !== 'break') {
         totalFocusSecs += data.duration;
-        if (dateObj.toDateString() === todayStr) todaySecs += data.duration;
+        if (dateStr === todayStr) todaySecs += data.duration;
         if (dateObj >= weekAgo) weekSecs += data.duration;
         if (dateObj >= monthAgo) monthSecs += data.duration;
+
+        // Bar chart üçün günləri tapıb əlavə edirik
+        const dayObj = last7Days.find(d => d.dateStr === dateStr);
+        if (dayObj) {
+          dayObj.duration += data.duration;
+        }
 
         const lbl = data.subject || 'Ümumi';
         if (!chartDataByLabel[lbl]) {
@@ -691,21 +768,40 @@ async function loadStats() {
     document.getElementById('stat-month').textContent = Math.floor(monthSecs / 60) + 'min';
     document.getElementById('stat-total').textContent = `${Math.floor(totalFocusSecs / 3600)}h ${Math.floor((totalFocusSecs % 3600) / 60)}m`;
 
-    // Focus/Break Ratio
-    const totalTime = totalFocusSecs + totalBreakSecs;
-    let focusPct = 0, breakPct = 0;
-    if (totalTime > 0) {
-      focusPct = Math.round((totalFocusSecs / totalTime) * 100);
-      breakPct = Math.round((totalBreakSecs / totalTime) * 100);
-    }
-    document.getElementById('ratio-focus-lbl').textContent = Math.floor(totalFocusSecs / 60) + 'min';
-    document.getElementById('ratio-break-lbl').textContent = Math.floor(totalBreakSecs / 60) + 'min';
-    document.getElementById('ratio-focus-pct').textContent = focusPct + '%';
-    document.getElementById('ratio-break-pct').textContent = breakPct + '%';
-    document.getElementById('ratio-focus-bar').style.width = focusPct + '%';
-    document.getElementById('ratio-break-bar').style.width = breakPct + '%';
+    // --- BAR CHART (Son 7 gün) ---
+    const barCtx = document.getElementById('activityBarChart').getContext('2d');
+    if (activityChartInstance) activityChartInstance.destroy();
+    activityChartInstance = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: last7Days.map(d => d.display),
+        datasets: [{
+          label: 'Fokus (saat)',
+          data: last7Days.map(d => (d.duration / 3600).toFixed(1)), // Saniyəni saata çeviririk
+          backgroundColor: '#C5B4E3', // Minimalist pastel bənövşəyi
+          borderRadius: 4,
+          barThickness: 14
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { 
+            beginAtZero: true, 
+            grid: { color: '#2c2c2c' }, 
+            ticks: { color: '#9e9e9e', callback: function(value) { return value + ' h'; } } 
+          },
+          x: { 
+            grid: { display: false }, 
+            ticks: { color: '#9e9e9e', font: { size: 10 } } 
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
 
-    // Doughnut Chart
+    // --- DOUGHNUT CHART (Mövzu bölgüsü) ---
     const labels = Object.keys(chartDataByLabel);
     const dataValues = labels.map(lbl => chartDataByLabel[lbl].duration);
     const bgColors = labels.map(lbl => chartDataByLabel[lbl].color);
@@ -743,10 +839,14 @@ async function loadStats() {
 composerEl.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = inputEl.value.trim();
-  if (!text || state.isSending) return;
+  
+  if ((!text && !selectedImageBase64) || state.isSending) return;
+  
   inputEl.value = ""; inputEl.style.height = "auto";
   micSendBtn.classList.remove("is-send"); 
-  sendMessageToBackend(text);
+  
+  sendMessageToBackend(text, selectedImageBase64);
+  clearImageSelection();
 });
 
 inputEl.addEventListener("keydown", (e) => {
@@ -755,7 +855,11 @@ inputEl.addEventListener("keydown", (e) => {
 
 inputEl.addEventListener("input", () => {
   inputEl.style.height = "auto"; inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
-  micSendBtn.classList.toggle("is-send", inputEl.value.trim().length > 0);
+  if (inputEl.value.trim().length > 0 || selectedImageBase64) {
+    micSendBtn.classList.add("is-send");
+  } else {
+    micSendBtn.classList.remove("is-send");
+  }
 });
 
 clearChatBtn.addEventListener("click", () => startNewConversation());
@@ -769,12 +873,27 @@ function showToast(message) {
 function switchScreen(name) {
   screens.forEach((s) => s.classList.toggle("active", s.dataset.screen === name));
   navTabs.forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+  
+  // Menyu ikonlarının sadəcə chat bölməsində görünməsi
+  if (name === 'chat') {
+    mainTopbar.style.display = 'flex';
+  } else {
+    mainTopbar.style.display = 'none';
+  }
+
   if (name === 'stats') loadStats(); 
 }
 
 navTabs.forEach((tab) => tab.addEventListener("click", () => switchScreen(tab.dataset.tab)));
 
 // Söhbət tarixçəsi menyusu (☰)
+function openHistoryDrawer() {
+  historyOverlay.classList.add('open');
+}
+function closeHistoryDrawer() {
+  historyOverlay.classList.remove('open');
+}
+
 menuBtn.addEventListener("click", () => openHistoryDrawer());
 closeHistoryBtn.addEventListener("click", () => closeHistoryDrawer());
 historyOverlay.addEventListener("click", (e) => { if (e.target === historyOverlay) closeHistoryDrawer(); });
